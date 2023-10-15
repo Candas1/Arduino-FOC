@@ -8,19 +8,23 @@ LowPassFilter::LowPassFilter(float time_constant)
 }
 
 
-float LowPassFilter::operator() (float x)
+float LowPassFilter::operator() (float x,float Ts)
 {
-    unsigned long timestamp = _micros();
-    float dt = (timestamp - timestamp_prev)*1e-6f;
+    unsigned long timestamp = 0;
+    
+    if (Ts==0){
+        timestamp = _micros();
+        Ts = (timestamp - timestamp_prev)*1e-6f;
+        if (Ts < 0.0f ) Ts = 1e-3f;
+    }
 
-    if (dt < 0.0f ) dt = 1e-3f;
-    else if(dt > 0.3f) {
+    else if(Ts > 0.3f) {
         y_prev = x;
         timestamp_prev = timestamp;
         return x;
     }
 
-    float alpha = Tf/(Tf + dt);
+    float alpha = Tf/(Tf + Ts);
     float y = alpha*y_prev + (1.0f - alpha)*x;
     y_prev = y;
     timestamp_prev = timestamp;

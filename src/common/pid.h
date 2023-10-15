@@ -22,7 +22,7 @@ public:
     PIDController(float P, float I, float D, float ramp, float limit);
     ~PIDController() = default;
 
-    float operator() (float error);
+    float operator() (float error,float Ts=0);
     void reset();
 
     float P; //!< Proportional gain 

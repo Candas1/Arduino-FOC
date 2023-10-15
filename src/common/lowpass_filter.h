@@ -17,7 +17,7 @@ public:
     LowPassFilter(float Tf);
     ~LowPassFilter() = default;
 
-    float operator() (float x);
+    float operator() (float x,float Ts=0);
     float Tf; //!< Low pass filter time constant
 
 protected:

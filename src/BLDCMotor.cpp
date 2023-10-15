@@ -315,6 +315,12 @@ int BLDCMotor::absoluteZeroSearch() {
 // Iterative function looping FOC algorithm, setting Uq on the Motor
 // The faster it can be run the better
 void BLDCMotor::loopFOC() {
+  float now = _micros();
+  if (timestamp_prev == 0) timestamp_prev = now; // First time  
+  Ts = ( now - timestamp_prev)*1e-6f;
+  if (Ts < 0.0f ) Ts = 1e-3f;
+  timestamp_prev = now;
+  
   // update sensor - do this even in open-loop mode, as user may be switching between modes and we could lose track
   //                 of full rotations otherwise.
   if (sensor) sensor->update();
@@ -350,11 +356,11 @@ void BLDCMotor::loopFOC() {
       // read dq currents
       current = current_sense->getFOCCurrents(electrical_angle);
       // filter values
-      current.q = LPF_current_q(current.q);
-      current.d = LPF_current_d(current.d);
+      current.q = LPF_current_q(current.q,Ts);
+      current.d = LPF_current_d(current.d,Ts);
       // calculate the phase voltages
-      voltage.q = PID_current_q(current_sp - current.q);
-      voltage.d = PID_current_d(-current.d);
+      voltage.q = PID_current_q(current_sp - current.q,Ts);
+      voltage.d = PID_current_d(-current.d,Ts);
       // d voltage - lag compensation - TODO verify
       // if(_isset(phase_inductance)) voltage.d = _constrain( voltage.d - current_sp*shaft_velocity*pole_pairs*phase_inductance, -voltage_limit, voltage_limit);
       break;
