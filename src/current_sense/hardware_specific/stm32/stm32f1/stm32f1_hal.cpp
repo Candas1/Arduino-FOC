@@ -67,7 +67,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   hadc.Init.DiscontinuousConvMode = DISABLE;
   hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc.Init.NbrOfConversion = 0;
+  hadc.Init.NbrOfConversion = 1; // To make analogread happy
   HAL_ADC_Init(&hadc);
   /**Configure for the selected ADC regular channel to be converted. 
   */
@@ -109,25 +109,27 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   #endif
 
   // first channel
-  sConfigInjected.InjectedRank = ADC_REGULAR_RANK_1;
+  sConfigInjected.InjectedRank = ADC_INJECTED_RANK_1;
   sConfigInjected.InjectedChannel =  STM_PIN_CHANNEL(pinmap_function(analogInputToPinName(cs_params->pins[0]), PinMap_ADC));
   HAL_ADCEx_InjectedConfigChannel(&hadc, &sConfigInjected);
   // second channel
-  sConfigInjected.InjectedRank = ADC_REGULAR_RANK_2;
+  sConfigInjected.InjectedRank = ADC_INJECTED_RANK_2;
   sConfigInjected.InjectedChannel = STM_PIN_CHANNEL(pinmap_function(analogInputToPinName(cs_params->pins[1]), PinMap_ADC));
   HAL_ADCEx_InjectedConfigChannel(&hadc, &sConfigInjected);
 
   // third channel - if exists
   if(_isset(cs_params->pins[2])){
-    sConfigInjected.InjectedRank = ADC_REGULAR_RANK_3;
+    sConfigInjected.InjectedRank = ADC_INJECTED_RANK_3;
     sConfigInjected.InjectedChannel = STM_PIN_CHANNEL(pinmap_function(analogInputToPinName(cs_params->pins[2]), PinMap_ADC));
     HAL_ADCEx_InjectedConfigChannel(&hadc, &sConfigInjected);
   }
-  
+
+  #ifdef USE_ADC_INTERRUPT  
   // enable interrupt
   HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
-  
+  #endif
+
   cs_params->adc_handle = &hadc;
 
   return 0;
@@ -151,6 +153,7 @@ void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const in
 
 }
 
+#ifdef USE_ADC_INTERRUPT
 extern "C" {
   void ADC1_2_IRQHandler(void)
   {
@@ -158,5 +161,6 @@ extern "C" {
   }
   
 }
+#endif
 
 #endif

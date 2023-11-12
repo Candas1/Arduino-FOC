@@ -61,17 +61,22 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
     //   - only necessary for the timers that have repetition counters
     cs_params->timer_handle->getHandle()->Instance->CR1 |= TIM_CR1_DIR;
     cs_params->timer_handle->getHandle()->Instance->CNT =  cs_params->timer_handle->getHandle()->Instance->ARR;
-    // remember that this timer has repetition counter - no need to downasmple
+    // remember that this timer has repetition counter - no need to downsample
     needs_downsample[_adcToIndex(cs_params->adc_handle)] = 0;
   }
   // set the trigger output event
   LL_TIM_SetTriggerOutput(cs_params->timer_handle->getHandle()->Instance, LL_TIM_TRGO_UPDATE);
 
-  // Start the adc calibration
+  // Run adc self-calibration
   HAL_ADCEx_Calibration_Start(cs_params->adc_handle);
 
-  // start the adc 
+  // start the adc
+  #ifdef USE_ADC_INTERRUPT
+  // start the adc
   HAL_ADCEx_InjectedStart_IT(cs_params->adc_handle);
+  #else
+  HAL_ADCEx_InjectedStart(cs_params->adc_handle);
+  #endif
 
   // restart all the timers of the driver
   _startTimers(driver_params->timers, 6);
@@ -82,12 +87,16 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]) // found in the buffer
+      #ifdef USE_ADC_INTERRUPT
       return adc_val[_adcToIndex(((Stm32CurrentSenseParams*)cs_params)->adc_handle)][i] * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
-  } 
+      #else
+      return HAL_ADCEx_InjectedGetValue(((Stm32CurrentSenseParams*)cs_params)->adc_handle,i+1) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      #endif
+  }  
   return 0;
 }
 
-
+#ifdef USE_ADC_INTERRUPT
 extern "C" {
   void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *AdcHandle){
     // calculate the instance
@@ -104,5 +113,6 @@ extern "C" {
     adc_val[adc_index][2]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_3);
   }
 }
+#endif
 
 #endif
