@@ -71,7 +71,8 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
   HAL_ADCEx_Calibration_Start(cs_params->adc_handle);
 
   // start the adc
-  #ifdef USE_ADC_INTERRUPT 
+  #ifdef USE_ADC_INTERRUPT
+  // start the adc
   HAL_ADCEx_InjectedStart_IT(cs_params->adc_handle);
   #else
   HAL_ADCEx_InjectedStart(cs_params->adc_handle);
