@@ -163,7 +163,7 @@ class FOCMotor
     float voltage_bemf; //!< estimated backemf voltage (if provided KV constant)
     float Ts=0;
     float timestamp_prev=0;
-
+  
     // motor configuration parameters
     float voltage_sensor_align;//!< sensor and motor align voltage parameter
     float velocity_index_search;//!< target velocity for index search 
