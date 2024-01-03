@@ -154,12 +154,16 @@ class FOCMotor
     float feed_forward_velocity = 0.0f; //!< current feed forward velocity
   	float shaft_angle;//!< current motor angle
   	float electrical_angle;//!< current electrical angle
-  	float shaft_velocity;//!< current motor velocity 
+  	float electrical_angle_sin;//!< current electrical angle sin
+    float electrical_angle_cos;//!< current electrical angle cos
+    float shaft_velocity;//!< current motor velocity 
     float current_sp;//!< target current ( q current )
     float shaft_velocity_sp;//!< current target velocity
     float shaft_angle_sp;//!< current target angle
     DQVoltage_s voltage;//!< current d and q voltage set to the motor
     DQCurrent_s current;//!< current d and q current measured
+    PhaseCurrent_s phase_currents;//!< a/b/c phase currents measured
+    ABCurrent_s ab_currents;// Alpha beta currents
     float voltage_bemf; //!< estimated backemf voltage (if provided KV constant)
 
     // motor configuration parameters

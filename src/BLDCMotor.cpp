@@ -329,6 +329,21 @@ void BLDCMotor::loopFOC() {
   // This function will not have numerical issues because it uses Sensor::getMechanicalAngle() 
   // which is in range 0-2PI
   electrical_angle = electricalAngle();
+  if (current_sense || foc_modulation == FOCModulationType::SinePWM || foc_modulation == FOCModulationType::SpaceVectorPWM){
+    _sincos(electrical_angle,&electrical_angle_sin,&electrical_angle_cos);
+  }
+
+  if(!current_sense){
+    // read current phase currents
+    phase_currents = current_sense->getPhaseCurrents();
+
+    // calculate clarke transform
+    ab_currents = current_sense->getABCurrents(phase_currents);
+    
+    // calculate park transform
+    current = current_sense->getDQCurrents(ab_currents,electrical_angle,electrical_angle_sin,electrical_angle_cos);
+  }
+
   switch (torque_controller) {
     case TorqueControlType::voltage:
       // no need to do anything really
@@ -347,8 +362,6 @@ void BLDCMotor::loopFOC() {
       break;
     case TorqueControlType::foc_current:
       if(!current_sense) return;
-      // read dq currents
-      current = current_sense->getFOCCurrents(electrical_angle);
       // filter values
       current.q = LPF_current_q(current.q);
       current.d = LPF_current_d(current.d);
@@ -547,12 +560,10 @@ void BLDCMotor::setPhaseVoltage(float Uq, float Ud, float angle_el) {
     case FOCModulationType::SinePWM :
     case FOCModulationType::SpaceVectorPWM :
       // Sinusoidal PWM modulation
-      // Inverse Park + Clarke transformation
-      _sincos(angle_el, &_sa, &_ca);
 
       // Inverse park transform
-      Ualpha =  _ca * Ud - _sa * Uq;  // -sin(angle) * Uq;
-      Ubeta =  _sa * Ud + _ca * Uq;    //  cos(angle) * Uq;
+      Ualpha =  electrical_angle_cos * Ud - electrical_angle_sin * Uq;  // -sin(angle) * Uq;
+      Ubeta  =  electrical_angle_sin * Ud + electrical_angle_cos * Uq;    //  cos(angle) * Uq;
 
       // Clarke transform
       Ua = Ualpha;

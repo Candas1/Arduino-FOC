@@ -7,7 +7,7 @@
 float CurrentSense::getDCCurrent(float motor_electrical_angle){
     // read current phase currents
     PhaseCurrent_s current = getPhaseCurrents();
-    
+
     // calculate clarke transform
     ABCurrent_s ABcurrent = getABCurrents(current);
 
@@ -39,8 +39,8 @@ DQCurrent_s CurrentSense::getFOCCurrents(float angle_el){
     ABCurrent_s ABcurrent = getABCurrents(current);
     
     // calculate park transform
-    DQCurrent_s return_current = getDQCurrents(ABcurrent,angle_el);
-
+    //DQCurrent_s return_current = getDQCurrents(ABcurrent,angle_el);
+    DQCurrent_s return_current;
     return return_current;
 }
 
@@ -83,11 +83,8 @@ ABCurrent_s CurrentSense::getABCurrents(PhaseCurrent_s current){
 // function used with the foc algorihtm
 //   calculating D and Q currents from Alpha Beta currents and electrical angle
 //   - function calculating Clarke transform of the phase currents
-DQCurrent_s CurrentSense::getDQCurrents(ABCurrent_s current, float angle_el){
+DQCurrent_s CurrentSense::getDQCurrents(ABCurrent_s current, float angle_el, float st, float ct){
  // calculate park transform
-    float ct;
-    float st;
-    _sincos(angle_el, &st, &ct);
     DQCurrent_s return_current;
     return_current.d = current.alpha * ct + current.beta * st;
     return_current.q = current.beta * ct - current.alpha * st;

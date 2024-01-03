@@ -85,7 +85,7 @@ class CurrentSense{
      * 
      * @param current - phase current
      */
-    DQCurrent_s getDQCurrents(ABCurrent_s current,float angle_el);
+    DQCurrent_s getDQCurrents(ABCurrent_s current,float angle_el, float st, float ct);
 
 
 };
