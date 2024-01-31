@@ -32,12 +32,13 @@ float PIDController::operator() (float error){
     float integral = integral_prev + I*Ts*0.5f*(error + error_prev);
     // antiwindup - limit the output
     integral = _constrain(integral, -limit, limit);
+    
+    // sum all the components
+    float output = proportional + integral;
+
     // Discrete derivation
     // u_dk = D(ek - ek_1)/Ts
-    float derivative = D ? D*(error - error_prev)/Ts : 0.0f;
-
-    // sum all the components
-    float output = proportional + integral + derivative;
+    if (D) output += D*(error - error_prev)/Ts;
 
     // Add feedforward term
     if (feedforward){
