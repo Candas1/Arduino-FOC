@@ -356,10 +356,10 @@ void BLDCMotor::loopFOC() {
     case TorqueControlType::foc_current:
       if(!current_sense) return;
       // read dq currents
-      current = current_sense->getFOCCurrents(electrical_angle);
+      current_raw = current_sense->getFOCCurrents(electrical_angle);
       // filter values
-      current.q = LPF_current_q(current.q);
-      current.d = LPF_current_d(current.d);
+      current.q = LPF_current_q(current_raw.q);
+      current.d = LPF_current_d(current_raw.d);
       // calculate the phase voltages
       voltage.q = PID_current_q(current_sp - current.q);
       voltage.d = PID_current_d(-current.d);

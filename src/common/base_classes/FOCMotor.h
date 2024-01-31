@@ -160,6 +160,7 @@ class FOCMotor
     float shaft_angle_sp;//!< current target angle
     DQVoltage_s voltage;//!< current d and q voltage set to the motor
     DQCurrent_s current;//!< current d and q current measured
+    DQCurrent_s current_raw;//!< current d and q current measured (unfiltered)
     float voltage_bemf; //!< estimated backemf voltage (if provided KV constant)
 
     // motor configuration parameters
