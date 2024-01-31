@@ -34,7 +34,7 @@ float PIDController::operator() (float error){
     integral = _constrain(integral, -limit, limit);
     // Discrete derivation
     // u_dk = D(ek - ek_1)/Ts
-    float derivative = (D!=0) ? D*(error - error_prev)/Ts : 0;
+    float derivative = D ? D*(error - error_prev)/Ts : 0.0f;
 
     // sum all the components
     float output = proportional + integral + derivative;
@@ -42,7 +42,7 @@ float PIDController::operator() (float error){
     // Add feedforward term
     if (feedforward){
         output += feedforward;
-        feedforward = 0; // reset it as it might be incremented by other functions
+        feedforward = 0.0f; // reset it as it might be incremented by other functions
     }
 
     // antiwindup - limit the output variable
