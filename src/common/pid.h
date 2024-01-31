@@ -30,6 +30,7 @@ public:
     float D; //!< Derivative gain 
     float output_ramp; //!< Maximum speed of change of the output value
     float limit; //!< Maximum output value
+    float feedforward; //!< feedforward term
 
 protected:
     float error_prev; //!< last tracking error value
