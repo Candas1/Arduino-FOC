@@ -9,7 +9,7 @@
 // https://github.com/stm32duino/Arduino_Core_STM32/blob/e156c32db24d69cb4818208ccc28894e2f427cfa/system/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc_ex.h#L215
 uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
   if(timer->getHandle()->Instance == TIM1)  
-    return ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+    return ADC_EXTERNALTRIGINJECCONV_T1_CC4;
 #ifdef TIM2 // if defined timer 2
   else if(timer->getHandle()->Instance == TIM2) 
     return ADC_EXTERNALTRIGINJECCONV_T2_TRGO;
