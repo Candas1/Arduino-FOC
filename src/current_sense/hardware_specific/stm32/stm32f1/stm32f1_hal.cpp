@@ -22,6 +22,10 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
   else if(timer->getHandle()->Instance == TIM5) 
     return ADC_EXTERNALTRIGINJECCONV_T5_TRGO;
 #endif
+#ifdef TIM8 // if defined timer 8, use timer 1 for now
+  else if(timer->getHandle()->Instance == TIM8) 
+    return ADC_EXTERNALTRIGINJECCONV_T1_CC4;
+#endif
   else
     return _TRGO_NOT_AVAILABLE;
 }
