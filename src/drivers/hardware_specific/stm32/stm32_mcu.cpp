@@ -24,7 +24,7 @@ int getTimerNumber(int timerIndex);
 int numTimerPinsUsed;
 PinMap* timerPinsUsed[SIMPLEFOC_STM32_MAX_PINTIMERSUSED];
 
-
+int16_t sampling_point = SIMPLEFOC_STM32_SAMPLING_POINT;
 
 
 
@@ -490,6 +490,10 @@ STM32DriverParams* _initHardware6PWMInterface(long PWM_freq, float dead_zone, Pi
     return (STM32DriverParams*)SIMPLEFOC_DRIVER_INIT_FAILED;
   if (_initHardware6PWMPair(PWM_freq, dead_zone, pinC_h, pinC_l, params, 4) == SIMPLEFOC_DRIVER_INIT_FAILED)
     return (STM32DriverParams*)SIMPLEFOC_DRIVER_INIT_FAILED;
+
+  // initialize Channel 4 and set it's pulse
+  params->timers[0]->setMode(4, TIMER_OUTPUT_COMPARE_PWM1, NC);
+  params->timers[0]->setCaptureCompare(4,sampling_point,PERCENT_COMPARE_FORMAT);  
 
   return params;
 }
@@ -975,6 +979,10 @@ void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_s
       _setSinglePhaseState(phase_state[2], ((STM32DriverParams*)params)->timers[4], ((STM32DriverParams*)params)->channels[4], ((STM32DriverParams*)params)->channels[5]);
       if(phase_state[2] == PhaseState::PHASE_OFF) dc_c = 0.0f;
       _setPwm(((STM32DriverParams*)params)->timers[4], ((STM32DriverParams*)params)->channels[4], _PWM_RANGE*dc_c, _PWM_RESOLUTION);
+      
+      // Set Sampling point
+      ((STM32DriverParams*)params)->timers[0]->setCaptureCompare(4,sampling_point,PERCENT_COMPARE_FORMAT);
+
       break;
     case _SOFTWARE_6PWM:
       float dead_zone = ((STM32DriverParams*)params)->dead_zone  / 2.0f;

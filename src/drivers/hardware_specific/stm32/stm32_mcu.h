@@ -15,6 +15,10 @@
 #define _SOFTWARE_6PWM 0
 #define _ERROR_6PWM -1
 
+// To be use as sampling point on T1 and T8
+#ifndef SIMPLEFOC_STM32_SAMPLING_POINT
+  #define SIMPLEFOC_STM32_SAMPLING_POINT 99
+#endif
 
 typedef struct STM32DriverParams {
   HardwareTimer* timers[6] = {NULL};
