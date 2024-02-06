@@ -39,9 +39,29 @@ uint32_t _timerToRegularTRGO(HardwareTimer* timer){
     return _TRGO_NOT_AVAILABLE;
 }
 
-ADC_HandleTypeDef hadc;
+ADC_HandleTypeDef hadc1;
+#ifdef ADC2
+ADC_HandleTypeDef hadc2;
+#endif
+#ifdef ADC3
+ADC_HandleTypeDef hadc3;
+#endif
 
 int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params)
+{
+  // Allows the use of multiple ADCs by running _adc_init with the right ADC handle
+  ADC_TypeDef *Instance = (ADC_TypeDef *)pinmap_peripheral(analogInputToPinName(cs_params->pins[0]), PinMap_ADC);
+  if (Instance == ADC1) _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc1);
+  #ifdef ADC2
+  else if (Instance == ADC2) _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc2); 
+  #endif
+  #ifdef ADC3
+  else if (Instance == ADC3) _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc3);
+  #endif
+  return 0;
+}
+
+int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params, ADC_HandleTypeDef &hadc)
 {
   ADC_InjectionConfTypeDef sConfigInjected;
     
