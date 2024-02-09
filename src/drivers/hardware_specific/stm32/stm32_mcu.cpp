@@ -491,11 +491,11 @@ STM32DriverParams* _initHardware6PWMInterface(long PWM_freq, float dead_zone, Pi
   if (_initHardware6PWMPair(PWM_freq, dead_zone, pinC_h, pinC_l, params, 4) == SIMPLEFOC_DRIVER_INIT_FAILED)
     return (STM32DriverParams*)SIMPLEFOC_DRIVER_INIT_FAILED;
 
-  if IS_TIM_CC4_INSTANCE((STM32DriverParams*)params)->timers[0]->Instance){
-    // initialize Channel 4 and set it's pulse
+  if (IS_TIM_CC4_INSTANCE(((STM32DriverParams*)params)->timers[0]->getHandle()->Instance)){
+    // initialize Channel 4 and set it's pulse as percentage
     params->timers[0]->setMode(4, TIMER_OUTPUT_COMPARE_PWM1, NC);
     params->timers[0]->setCaptureCompare(4,sampling_point,PERCENT_COMPARE_FORMAT);
-    STM32DriverParams*)params)->use_CC4 = 1;
+    ((STM32DriverParams*)params)->use_CC4 = 1;
   }
 
   return params;
@@ -983,7 +983,7 @@ void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_s
       if(phase_state[2] == PhaseState::PHASE_OFF) dc_c = 0.0f;
       _setPwm(((STM32DriverParams*)params)->timers[4], ((STM32DriverParams*)params)->channels[4], _PWM_RANGE*dc_c, _PWM_RESOLUTION);
       
-      if (STM32DriverParams*)params)->use_CC4){
+      if (((STM32DriverParams*)params)->use_CC4){
         // If timer has Channel 4, set Sampling point
         ((STM32DriverParams*)params)->timers[0]->setCaptureCompare(4,sampling_point,PERCENT_COMPARE_FORMAT);
       }
