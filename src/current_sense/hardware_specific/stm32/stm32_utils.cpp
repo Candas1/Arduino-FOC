@@ -1,6 +1,22 @@
-#include "stm32f4_utils.h"
+#include "stm32_utils.h"
 
-#if defined(STM32F4xx)
+#if defined(_STM32_DEF_)
+
+uint32_t _getInjADCRank(int index)
+{
+  switch(index){
+    case 1:
+      return ADC_INJECTED_RANK_1;
+    case 2:
+      return ADC_INJECTED_RANK_2;
+    case 3:
+      return ADC_INJECTED_RANK_3;
+    case 4:
+      return ADC_INJECTED_RANK_4;
+    default:
+      return 0;
+  }
+}
 
 /* Exported Functions */
 /**
@@ -91,6 +107,7 @@ uint32_t _getADCChannel(PinName pin)
     case 22:
       channel = ADC_CHANNEL_22;
       break;
+#ifdef ADC_CHANNEL_23
     case 23:
       channel = ADC_CHANNEL_23;
       break;
@@ -123,17 +140,18 @@ uint32_t _getADCChannel(PinName pin)
 #endif
 #endif
 #endif
-    default:
+#endif
+     default:
       _Error_Handler("ADC: Unknown adc channel", (int)(STM_PIN_CHANNEL(function)));
       break;
   }
   return channel;
 }
 
-
 // timer to injected TRGO
 // https://github.com/stm32duino/Arduino_Core_STM32/blob/e156c32db24d69cb4818208ccc28894e2f427cfa/system/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L179
 uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
+#if defined(STM32F1xx)
   if(timer->getHandle()->Instance == TIM1)  
     return ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
 #ifdef TIM2 // if defined timer 2
@@ -148,22 +166,86 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
   else if(timer->getHandle()->Instance == TIM5) 
     return ADC_EXTERNALTRIGINJECCONV_T5_TRGO;
 #endif
-  else
-    return _TRGO_NOT_AVAILABLE;
-}
-
-// timer to regular TRGO
-// https://github.com/stm32duino/Arduino_Core_STM32/blob/e156c32db24d69cb4818208ccc28894e2f427cfa/system/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc.h#L331
-uint32_t _timerToRegularTRGO(HardwareTimer* timer){
-  if(timer->getHandle()->Instance == TIM2)  
-    return ADC_EXTERNALTRIGCONV_T2_TRGO;
+#endif
+#if defined(STM32F4xx)
+  if(timer->getHandle()->Instance == TIM1)  
+    return ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
+#ifdef TIM2 // if defined timer 2
+  else if(timer->getHandle()->Instance == TIM2) 
+    return ADC_EXTERNALTRIGINJECCONV_T2_TRGO;
+#endif
+#ifdef TIM4 // if defined timer 4
+  else if(timer->getHandle()->Instance == TIM4) 
+    return ADC_EXTERNALTRIGINJECCONV_T4_TRGO;
+#endif
+#ifdef TIM5 // if defined timer 5
+  else if(timer->getHandle()->Instance == TIM5) 
+    return ADC_EXTERNALTRIGINJECCONV_T5_TRGO;
+#endif
+#endif
+#if defined(STM32G4xx)
+if(timer->getHandle()->Instance == TIM1)  
+    return ADC_EXTERNALTRIGINJEC_T1_TRGO;
+#ifdef TIM2 // if defined timer 2
+  else if(timer->getHandle()->Instance == TIM2) 
+    return ADC_EXTERNALTRIGINJEC_T2_TRGO;
+#endif
 #ifdef TIM3 // if defined timer 3
   else if(timer->getHandle()->Instance == TIM3) 
-    return ADC_EXTERNALTRIGCONV_T3_TRGO;
+    return ADC_EXTERNALTRIGINJEC_T3_TRGO;
+#endif
+#ifdef TIM4 // if defined timer 4
+  else if(timer->getHandle()->Instance == TIM4) 
+    return ADC_EXTERNALTRIGINJEC_T4_TRGO;
+#endif
+#ifdef TIM6 // if defined timer 6
+  else if(timer->getHandle()->Instance == TIM6) 
+    return ADC_EXTERNALTRIGINJEC_T6_TRGO;
+#endif
+#ifdef TIM7 // if defined timer 7
+  else if(timer->getHandle()->Instance == TIM7) 
+    return ADC_EXTERNALTRIGINJEC_T7_TRGO;
 #endif
 #ifdef TIM8 // if defined timer 8
   else if(timer->getHandle()->Instance == TIM8) 
-    return ADC_EXTERNALTRIGCONV_T8_TRGO;
+    return ADC_EXTERNALTRIGINJEC_T8_TRGO;
+#endif
+#ifdef TIM15 // if defined timer 15
+  else if(timer->getHandle()->Instance == TIM15) 
+    return ADC_EXTERNALTRIGINJEC_T15_TRGO;
+#endif
+#ifdef TIM20 // if defined timer 15
+  else if(timer->getHandle()->Instance == TIM20) 
+    return ADC_EXTERNALTRIGINJEC_T20_TRGO;
+#endif
+#endif
+#if defined(STM32L4xx)
+if(timer->getHandle()->Instance == TIM1)  
+    return ADC_EXTERNALTRIGINJEC_T1_TRGO;
+#ifdef TIM2 // if defined timer 2
+  else if(timer->getHandle()->Instance == TIM2) 
+    return ADC_EXTERNALTRIGINJEC_T2_TRGO;
+#endif
+#ifdef TIM3 // if defined timer 3
+  else if(timer->getHandle()->Instance == TIM3) 
+    return ADC_EXTERNALTRIGINJEC_T3_TRGO;
+#endif
+#ifdef TIM4 // if defined timer 4
+  else if(timer->getHandle()->Instance == TIM4) 
+    return ADC_EXTERNALTRIGINJEC_T4_TRGO;
+#endif
+#ifdef TIM6 // if defined timer 6
+  else if(timer->getHandle()->Instance == TIM6) 
+    return ADC_EXTERNALTRIGINJEC_T6_TRGO;
+#endif
+#ifdef TIM8 // if defined timer 8
+  else if(timer->getHandle()->Instance == TIM8) 
+    return ADC_EXTERNALTRIGINJEC_T8_TRGO;
+#endif
+#ifdef TIM15 // if defined timer 15
+  else if(timer->getHandle()->Instance == TIM15) 
+    return ADC_EXTERNALTRIGINJEC_T15_TRGO;
+#endif
 #endif
   else
     return _TRGO_NOT_AVAILABLE;
