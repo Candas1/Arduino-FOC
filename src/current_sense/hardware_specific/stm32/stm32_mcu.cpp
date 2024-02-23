@@ -151,18 +151,18 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
       Instance = (ADC_TypeDef*)pinmap_peripheral(analogInputToPinName(cs_params->pins[i]), PinMap_ADC);
-      if (Instance == ADC1) status = _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc1,sConfigInjected1,i);
+      if (Instance == ADC1) status = _adc_init(cs_params, Instance,hadc1,sConfigInjected1,i);
       #ifdef ADC2
-      else if (Instance == ADC2) status = _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc2,sConfigInjected2,i); 
+      else if (Instance == ADC2) status = _adc_init(cs_params, Instance,hadc2,sConfigInjected2,i); 
       #endif
       #ifdef ADC3
-      else if (Instance == ADC3) status = _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc3,sConfigInjected3,i);
+      else if (Instance == ADC3) status = _adc_init(cs_params, Instance,hadc3,sConfigInjected3,i);
       #endif
       #ifdef ADC4
-      else if (Instance == ADC4) status = _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc4,sConfigInjected4,i);
+      else if (Instance == ADC4) status = _adc_init(cs_params, Instance,hadc4,sConfigInjected4,i);
       #endif
       #ifdef ADC5
-      else if (Instance == ADC5) status = _adc_init(cs_params, (STM32DriverParams*)driver_params,hadc5,sConfigInjected5,i);
+      else if (Instance == ADC5) status = _adc_init(cs_params, Instance,hadc5,sConfigInjected5,i);
       #endif
 
       if (status!= 0) return -1;
@@ -176,7 +176,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   return 0;
 }
 
-int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params, ADC_HandleTypeDef &hadc, ADC_InjectionConfTypeDef &sConfigInjected, int index)
+int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef* Instance, ADC_HandleTypeDef &hadc, ADC_InjectionConfTypeDef &sConfigInjected, int index)
 {
 
   if (!hadc.Init.ClockPrescaler){
@@ -185,7 +185,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
       SIMPLEFOC_DEBUG("STM32-CS: Using ADC: ", _adcToIndex(&hadc)+1);
     #endif
     
-    hadc.Instance = ADC1;
+    hadc.Instance = Instance;
     hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
     #ifdef ADC_RESOLUTION_12B
     hadc.Init.Resolution = ADC_RESOLUTION_12B;
@@ -333,8 +333,7 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
 
   // start the adc
   if (use_adc_interrupt){
-    
-    
+      
     #if defined(STM32F4xx)
     // enable interrupt
     HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);

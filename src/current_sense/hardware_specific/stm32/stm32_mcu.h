@@ -24,7 +24,7 @@ typedef struct Stm32CurrentSenseParams {
 } Stm32CurrentSenseParams;
 
 int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params);
-int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params,ADC_HandleTypeDef &hadc, ADC_InjectionConfTypeDef &sConfigInjected, int index);
+int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef *Instance,ADC_HandleTypeDef &hadc, ADC_InjectionConfTypeDef &sConfigInjected, int index);
 void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const int pinB, const int pinC);
 
 #endif
