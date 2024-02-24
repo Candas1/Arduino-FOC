@@ -8,6 +8,7 @@
 
 #define _ADC_VOLTAGE 3.3f
 #define _ADC_RESOLUTION 4096.0f
+#define ADC_COUNT 5
 
 ADC_HandleTypeDef hadc1;
 ADC_InjectionConfTypeDef sConfigInjected1;
@@ -35,14 +36,16 @@ OPAMP_HandleTypeDef hopamp3;
 #endif
 
 // array of values of 4 injected channels per adc instance (5)
-uint32_t adc_val[5][4]={0};
-int adc_channel_count[5] = {0};
-int adc_channel_rank[5] = {0};
+uint32_t adc_val[ADC_COUNT][4]={0};
+ADC_HandleTypeDef* adc_handles[ADC_COUNT] = {NP};
+int adc_channel_count[ADC_COUNT] = {0};
+int adc_channel_rank[ADC_COUNT] = {0};
+int index_longest_adc = 0;
 
 // does adc interrupt need a downsample - per adc (5)
-bool needs_downsample[5] = {1};
+bool needs_downsample[ADC_COUNT] = {1};
 // downsampling variable - per adc (5)
-uint8_t tim_downsample[5] = {0};
+uint8_t tim_downsample[ADC_COUNT] = {0};
 
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
 uint8_t use_adc_interrupt = 1;
@@ -162,7 +165,6 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
       Instance = (ADC_TypeDef*)pinmap_peripheral(analogInputToPinName(cs_params->pins[i]), PinMap_ADC);
       status = _adc_init(cs_params,Instance,_adc_get_handle(Instance));
       if (status!= 0) return -1;
-      adc_channel_count[_adcToIndex(_adc_get_handle(Instance))]++; // Increment channel count for this ADC
     }    
   }
 
@@ -215,55 +217,59 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef* Instance, ADC_HandleTypeDef* hadc)
 {
 
-  if (hadc->Instance != 0) return 0; // Already initialized
+  if (hadc->Instance == 0){
+    // This is the first channel configuration of this ADC 
+    hadc->Instance = Instance;
 
-  // This is the first channel configuration of this ADC 
-  hadc->Instance = Instance;
+    #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: Using ADC: ", _adcToIndex(hadc)+1);
+    #endif
 
-  #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: Using ADC: ", _adcToIndex(hadc)+1);
-  #endif
+    hadc->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+    #ifdef ADC_RESOLUTION_12B
+    hadc->Init.Resolution = ADC_RESOLUTION_12B;
+    #endif
+    hadc->Init.ScanConvMode = ENABLE;
+    hadc->Init.ContinuousConvMode = DISABLE;
+    
+    #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
+        !defined(STM32F4xx) && !defined(STM32F7xx) && !defined(STM32G4xx) && \
+        !defined(STM32H5xx) && !defined(STM32H7xx) && !defined(STM32L4xx) &&  \
+        !defined(STM32L5xx) && !defined(STM32MP1xx) && !defined(STM32WBxx) || \
+        defined(ADC_SUPPORT_2_5_MSPS)
+    hadc->Init.LowPowerAutoPowerOff  = DISABLE;                       /* ADC automatically powers-off after a conversion and automatically wakes-up when a new conversion is triggered */
+    #endif
 
-  hadc->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  #ifdef ADC_RESOLUTION_12B
-  hadc->Init.Resolution = ADC_RESOLUTION_12B;
-  #endif
-  hadc->Init.ScanConvMode = ENABLE;
-  hadc->Init.ContinuousConvMode = DISABLE;
-  
-  #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
-      !defined(STM32F4xx) && !defined(STM32F7xx) && !defined(STM32G4xx) && \
-      !defined(STM32H5xx) && !defined(STM32H7xx) && !defined(STM32L4xx) &&  \
-      !defined(STM32L5xx) && !defined(STM32MP1xx) && !defined(STM32WBxx) || \
-      defined(ADC_SUPPORT_2_5_MSPS)
-  hadc->Init.LowPowerAutoPowerOff  = DISABLE;                       /* ADC automatically powers-off after a conversion and automatically wakes-up when a new conversion is triggered */
-  #endif
-
-  hadc->Init.DiscontinuousConvMode = DISABLE;
-  #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
-  hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  #endif
-  hadc->Init.ExternalTrigConv = ADC_SOFTWARE_START; // for now
-  #ifdef ADC_DATAALIGN_RIGHT
-  hadc->Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  #endif
-  #if !defined(STM32F0xx) && !defined(STM32L0xx)
-  hadc->Init.NbrOfConversion = 1;
-  #endif
-  hadc->Init.DMAContinuousRequests = DISABLE;
-  #ifdef ADC_EOC_SINGLE_CONV
-  hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  #endif
-  #ifdef ADC_OVR_DATA_PRESERVED
-  hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
-  #endif
-  if ( HAL_ADC_Init(hadc) != HAL_OK){
-  #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init ADC!");
-  #endif
-    return -1;
+    hadc->Init.DiscontinuousConvMode = DISABLE;
+    #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
+    hadc->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    #endif
+    hadc->Init.ExternalTrigConv = ADC_SOFTWARE_START; // for now
+    #ifdef ADC_DATAALIGN_RIGHT
+    hadc->Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    #endif
+    #if !defined(STM32F0xx) && !defined(STM32L0xx)
+    hadc->Init.NbrOfConversion = 1;
+    #endif
+    hadc->Init.DMAContinuousRequests = DISABLE;
+    #ifdef ADC_EOC_SINGLE_CONV
+    hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+    #endif
+    #ifdef ADC_OVR_DATA_PRESERVED
+    hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
+    #endif
+    if ( HAL_ADC_Init(hadc) != HAL_OK){
+    #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init ADC!");
+    #endif
+      return -1;
+    }
   }
 
+  adc_handles[_adcToIndex(hadc)] = hadc; 
+  adc_channel_count[_adcToIndex(hadc)]++; // Increment channel count for this ADC
+  index_longest_adc = max(index_longest_adc,adc_channel_count[_adcToIndex(hadc)]); // To find the adc that will finish sampling latest
+  
   return 0;
 }
 
@@ -310,7 +316,7 @@ int _adc_channel_config(Stm32CurrentSenseParams* cs_params, ADC_TypeDef* Instanc
     return -1;
   }
 
-  cs_params->adc_handle[pin_index] = hadc;
+  cs_params->adc_handle[pin_index] = hadc; // Use to read the injected adc register
   cs_params->adc_rank[pin_index] = sConfigInjected->InjectedRank; // Use to read the injected adc register
   cs_params->adc_index[pin_index] = adc_channel_rank[adc_index]; // Index to be used when reading from adc_val array
   adc_channel_rank[adc_index]++;
@@ -353,30 +359,19 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
   // set the trigger output event
   LL_TIM_SetTriggerOutput(cs_params->timer_handle->getHandle()->Instance, LL_TIM_TRGO_UPDATE);
  
-  _start_ADC(&hadc1);
-  #ifdef ADC2
-  _start_ADC(&hadc2);
-  #endif
-  #ifdef ADC3
-  _start_ADC(&hadc3);
-  #endif
-  #ifdef ADC4
-  _start_ADC(&hadc4);
-  #endif
-  #ifdef ADC5
-  _start_ADC(&hadc5);
-  #endif
+  _start_ADCs();
 
   // restart all the timers of the driver
   _startTimers(driver_params->timers, 6);
 }
 
-int _start_ADC(ADC_HandleTypeDef* hadc){
 
+int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   if (hadc->Instance == 0) return 0; // ADC not initialized
   if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
+  if (adc_channel_count[_adcToIndex(hadc)] == 0) return 0; // This ADC has no channel to sample
 
-// Start the adc calibration
+  // Start the adc calibration
 #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
   /*##-2.1- Calibrate ADC then Start the conversion process ####################*/
   #if defined(ADC_CALIB_OFFSET)
@@ -388,81 +383,114 @@ int _start_ADC(ADC_HandleTypeDef* hadc){
   #endif
   {
     /* ADC Calibration Error */
-    return 0;
+    return -1;
   }
+
+  return 0;
 #endif
+}
 
-  // start the adc
-  if (use_adc_interrupt){
-      
-    #if defined(STM32F4xx)
-    // enable interrupt
-    HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(ADC_IRQn);
-    #endif
-    
-    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
-    if(hadc->Instance == ADC1 ||hadc->Instance == ADC2) {
-      // enable interrupt
-      #ifdef ADC1_2_IRQn
-      HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
-      #endif
-    }
-    #endif
+int _start_ADC(ADC_HandleTypeDef* hadc){
 
-    #if defined(STM32G4xx) || defined(STM32L4xx)
-    #ifdef ADC2
-      else if (hadc->Instance == ADC2) {
-        // enable interrupt
-        #ifdef ADC1_2_IRQn
-        HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
-        #endif
-      }
-    #endif
-    #ifdef ADC3
-      else if (hadc->Instance == ADC3) {
-        // enable interrupt
-        HAL_NVIC_SetPriority(ADC3_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(ADC3_IRQn);
-      } 
-    #endif
-    #ifdef ADC4
-      else if (hadc->Instance == ADC4) {
-        // enable interrupt
-        HAL_NVIC_SetPriority(ADC4_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(ADC4_IRQn);
-      } 
-    #endif
-    #ifdef ADC5
-      else if (hadc->Instance == ADC5) {
-        // enable interrupt
-        HAL_NVIC_SetPriority(ADC5_IRQn, 0, 0);
-        HAL_NVIC_EnableIRQ(ADC5_IRQn);
-      } 
-    #endif
-    #endif
+  if (hadc->Instance == 0) return 0; // ADC not initialized
+  if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
+  if (adc_channel_count[_adcToIndex(hadc)] == 0) return 0; // This ADC has no channel to sample
 
-    HAL_ADCEx_InjectedStart_IT(hadc);
-  }else{
-    HAL_ADCEx_InjectedStart(hadc);
-  }
+  if (HAL_ADCEx_InjectedStart(hadc) !=  HAL_OK) return -1;
 
   return 0;
 }
 
+int _start_ADC_IT(ADC_HandleTypeDef* hadc){
+
+  if (hadc->Instance == 0) return 0; // ADC not initialized
+  if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
+  if (adc_channel_count[_adcToIndex(hadc)] == 0) return 0; // This ADC has no channel to sample
+      
+  // enable interrupt
+  #if defined(STM32F4xx)
+  HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(ADC_IRQn);
+  #endif
+
+  #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
+  if(hadc->Instance == ADC1 || hadc->Instance == ADC2) {
+    HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+  }
+  
+  #ifdef ADC2
+    else if (hadc->Instance == ADC2) {
+      HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+    }
+  #endif
+  #ifdef ADC3
+    else if (hadc->Instance == ADC3) {
+      HAL_NVIC_SetPriority(ADC3_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(ADC3_IRQn);
+    } 
+  #endif
+  #ifdef ADC4
+    else if (hadc->Instance == ADC4) {
+      HAL_NVIC_SetPriority(ADC4_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(ADC4_IRQn);
+    } 
+  #endif
+  #ifdef ADC5
+    else if (hadc->Instance == ADC5) {
+      HAL_NVIC_SetPriority(ADC5_IRQn, 0, 0);
+      HAL_NVIC_EnableIRQ(ADC5_IRQn);
+    } 
+  #endif
+  #endif
+
+  if (HAL_ADCEx_InjectedStart_IT(hadc) !=  HAL_OK) return -1;
+
+  return 0;
+}
+
+void _start_ADCs(void){
+  for (int i = 0; i < ADC_COUNT; i++){
+    if (adc_handles[i] != NP){
+      _calibrate_ADC(adc_handles[i]);
+      
+      if (use_adc_interrupt && (adc_handles[i])->Instance == ADC1) _start_ADC_IT(adc_handles[i]);
+      else _start_ADC(adc_handles[i]);
+    }
+  }
+}
+
+void _read_ADC(ADC_HandleTypeDef* hadc){
+
+  if (hadc->Instance == 0) return; // skip if ADC not initialized
+  if (!LL_ADC_IsEnabled(hadc->Instance)) return; // skip if ADC not started
+
+  int adc_index = _adcToIndex(hadc);
+  int channel_count = adc_channel_count[_adcToIndex(hadc)];
+  // Write Injected ADC values to the buffer for this ADC
+  for(int i=0;i<channel_count;i++){
+    adc_val[adc_index][i] = HAL_ADCEx_InjectedGetValue(hadc,_getInjADCRank(i+1));
+  } 
+}
+
+void _read_ADCs(){
+  for (int i = 0; i < ADC_COUNT; i++){
+    if (adc_handles[i] != NP){
+      _read_ADC(adc_handles[i]);
+    }
+  }
+}
+
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
+  if (!use_adc_interrupt) _read_ADCs();
   for(int i=0; i < 3; i++){
-    if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]) // found in the buffer
-      if (use_adc_interrupt){
-        int index = ((Stm32CurrentSenseParams*)cs_params)->adc_index[i];
-        int adc_index = _adcToIndex(((Stm32CurrentSenseParams*)cs_params)->adc_handle[i]); 
-        return adc_val[adc_index][index] * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
-      }else{
-        return HAL_ADCEx_InjectedGetValue(((Stm32CurrentSenseParams*)cs_params)->adc_handle[i], ((Stm32CurrentSenseParams*)cs_params)->adc_rank[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
-      }
+    if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
+      int index = ((Stm32CurrentSenseParams*)cs_params)->adc_index[i];
+      int adc_index = _adcToIndex(((Stm32CurrentSenseParams*)cs_params)->adc_handle[i]); 
+      return adc_val[adc_index][index] * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+    }
   } 
   return 0;
 }
@@ -479,9 +507,10 @@ extern "C" {
       return;
     }
     
-    adc_val[adc_index][0]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_1);
-    adc_val[adc_index][1]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_2);
-    adc_val[adc_index][2]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_3);    
+    _read_ADCs();
+    //adc_val[adc_index][0]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_1);
+    //adc_val[adc_index][1]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_2);
+    //adc_val[adc_index][2]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_3);    
   }
 }
 
