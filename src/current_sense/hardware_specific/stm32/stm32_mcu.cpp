@@ -168,7 +168,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     }    
   }
 
-  // One round for configuring the channels
+  // One round for configuring the channels with the total InjectedNbrOfConversion
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
       Instance = (ADC_TypeDef*)pinmap_peripheral(analogInputToPinName(cs_params->pins[i]), PinMap_ADC);
@@ -266,8 +266,8 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef* Instance, ADC_Han
     }
   }
 
-  adc_handles[_adcToIndex(hadc)] = hadc; 
-  adc_channel_count[_adcToIndex(hadc)]++; // Increment channel count for this ADC
+  adc_handles[_adcToIndex(hadc)] = hadc; // Store in list of adc handles to be able to loop through later
+  adc_channel_count[_adcToIndex(hadc)]++; // Increment total channel count for this ADC
   index_longest_adc = max(index_longest_adc,adc_channel_count[_adcToIndex(hadc)]); // To find the adc that will finish sampling latest
   
   return 0;
@@ -366,6 +366,7 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
 }
 
 
+// Calibrates the ADC if initialized and not already started
 int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   if (hadc->Instance == 0) return 0; // ADC not initialized
   if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
@@ -383,6 +384,9 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   #endif
   {
     /* ADC Calibration Error */
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: can't calibrate ADC :",_adcToIndex(hadc)+1);
+    #endif
     return -1;
   }
 
@@ -390,17 +394,24 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
 #endif
 }
 
+
+// Starts the ADC if initialized and not already started
 int _start_ADC(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return 0; // ADC not initialized
   if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
   if (adc_channel_count[_adcToIndex(hadc)] == 0) return 0; // This ADC has no channel to sample
 
-  if (HAL_ADCEx_InjectedStart(hadc) !=  HAL_OK) return -1;
-
+  if (HAL_ADCEx_InjectedStart(hadc) !=  HAL_OK){
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: can't start inj ADC :",_adcToIndex(hadc)+1);
+    #endif
+    return -1;
+  }
   return 0;
 }
 
+// Starts the ADC with interrupt if initialized and not already started
 int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return 0; // ADC not initialized
@@ -445,22 +456,34 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
   #endif
   #endif
 
-  if (HAL_ADCEx_InjectedStart_IT(hadc) !=  HAL_OK) return -1;
+  if (HAL_ADCEx_InjectedStart_IT(hadc) !=  HAL_OK){
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: can't start inj ADC with IT:",_adcToIndex(hadc)+1);
+    #endif
+    return -1;
+  }
+  return 0;
+}
+
+// Calibrated and starts all the ADCs that have been initialized
+int _start_ADCs(void){
+  int status = 0;
+
+  for (int i = 0; i < ADC_COUNT; i++){
+    if (adc_handles[i] != NP){
+      status = _calibrate_ADC(adc_handles[i]);
+      if (status!=0) return status;
+
+      if (use_adc_interrupt && (adc_handles[i])->Instance == ADC1) status = _start_ADC_IT(adc_handles[i]);
+      else status = _start_ADC(adc_handles[i]);
+      if (status!=0) return status;
+    }
+  }
 
   return 0;
 }
 
-void _start_ADCs(void){
-  for (int i = 0; i < ADC_COUNT; i++){
-    if (adc_handles[i] != NP){
-      _calibrate_ADC(adc_handles[i]);
-      
-      if (use_adc_interrupt && (adc_handles[i])->Instance == ADC1) _start_ADC_IT(adc_handles[i]);
-      else _start_ADC(adc_handles[i]);
-    }
-  }
-}
-
+// Writes Injected ADC values to the adc buffer
 void _read_ADC(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return; // skip if ADC not initialized
@@ -468,12 +491,12 @@ void _read_ADC(ADC_HandleTypeDef* hadc){
 
   int adc_index = _adcToIndex(hadc);
   int channel_count = adc_channel_count[_adcToIndex(hadc)];
-  // Write Injected ADC values to the buffer for this ADC
   for(int i=0;i<channel_count;i++){
     adc_val[adc_index][i] = HAL_ADCEx_InjectedGetValue(hadc,_getInjADCRank(i+1));
   } 
 }
 
+// Writes Injected ADC values to the adc buffer for all ADCs that have been initialized
 void _read_ADCs(){
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
@@ -484,7 +507,7 @@ void _read_ADCs(){
 
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
-  if (!use_adc_interrupt) _read_ADCs();
+  if (!use_adc_interrupt) _read_ADCs(); // Fill the adc buffer now in case no interrup is used
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
       int index = ((Stm32CurrentSenseParams*)cs_params)->adc_index[i];
@@ -507,10 +530,7 @@ extern "C" {
       return;
     }
     
-    _read_ADCs();
-    //adc_val[adc_index][0]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_1);
-    //adc_val[adc_index][1]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_2);
-    //adc_val[adc_index][2]=HAL_ADCEx_InjectedGetValue(AdcHandle, ADC_INJECTED_RANK_3);    
+    _read_ADCs(); // fill the ADC buffer
   }
 }
 

@@ -34,7 +34,7 @@ ADC_InjectionConfTypeDef *_adc_get_config(ADC_TypeDef* Instance);
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC_IT(ADC_HandleTypeDef* hadc);
-void _start_ADCs(void);
+int _start_ADCs(void);
 void _read_ADC(ADC_HandleTypeDef* hadc);
 void _read_ADCs(void);
 
