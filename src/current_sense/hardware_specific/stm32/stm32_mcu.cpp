@@ -255,7 +255,7 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef* Instance, ADC_Han
   hadc->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   #endif
   #ifdef ADC_OVR_DATA_PRESERVED
-  hadc.Init.Overrun = ADC_OVR_DATA_PRESERVED;
+  hadc->Init.Overrun = ADC_OVR_DATA_PRESERVED;
   #endif
   if ( HAL_ADC_Init(hadc) != HAL_OK){
   #ifdef SIMPLEFOC_STM32_DEBUG
@@ -380,11 +380,11 @@ int _start_ADC(ADC_HandleTypeDef* hadc){
 #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
   /*##-2.1- Calibrate ADC then Start the conversion process ####################*/
   #if defined(ADC_CALIB_OFFSET)
-  if (HAL_ADCEx_Calibration_Start(&adc, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK)
+  if (HAL_ADCEx_Calibration_Start(hadc, ADC_CALIB_OFFSET, ADC_SINGLE_ENDED) != HAL_OK)
   #elif defined(ADC_SINGLE_ENDED) && !defined(ADC1_V2_5)
-  if (HAL_ADCEx_Calibration_Start(&adc, ADC_SINGLE_ENDED) !=  HAL_OK)
+  if (HAL_ADCEx_Calibration_Start(hadc, ADC_SINGLE_ENDED) !=  HAL_OK)
   #else
-  if (HAL_ADCEx_Calibration_Start(&adc) !=  HAL_OK)
+  if (HAL_ADCEx_Calibration_Start(hadc) !=  HAL_OK)
   #endif
   {
     /* ADC Calibration Error */
@@ -497,7 +497,7 @@ extern "C" {
   #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
   void ADC1_2_IRQHandler(void)
   {
-      HAL_ADC_IRQHandler(&hadc);
+      HAL_ADC_IRQHandler(&hadc1);
   }
   #endif
 

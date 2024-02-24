@@ -32,6 +32,9 @@ void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const in
 ADC_HandleTypeDef *_adc_get_handle(ADC_TypeDef* Instance);
 ADC_InjectionConfTypeDef *_adc_get_config(ADC_TypeDef* Instance);
 int _start_ADC(ADC_HandleTypeDef* hadc);
+#ifdef ARDUINO_B_G431B_ESC1
+void _configureOPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
+#endif
 
 #endif
 #endif
