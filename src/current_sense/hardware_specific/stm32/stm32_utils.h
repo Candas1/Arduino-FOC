@@ -8,7 +8,6 @@
 
 #define _TRGO_NOT_AVAILABLE 12345
 
-
 uint32_t _getADCChannel(PinName pin);
 uint32_t _getInjADCRank(int index);
 

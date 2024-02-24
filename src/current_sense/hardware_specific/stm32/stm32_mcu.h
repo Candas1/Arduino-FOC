@@ -1,8 +1,10 @@
 
 #ifndef STM32_CURRENTSENSE_MCU_DEF
 #define STM32_CURRENTSENSE_MCU_DEF
+#include "Arduino.h"
 #include "../../hardware_api.h"
 #include "../../../common/foc_utils.h"
+#include "../../../drivers/hardware_api.h"
 #include "../../../drivers/hardware_specific/stm32/stm32_mcu.h"
 #include "stm32_utils.h"
 
@@ -24,8 +26,12 @@ typedef struct Stm32CurrentSenseParams {
 } Stm32CurrentSenseParams;
 
 int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* driver_params);
-int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef *Instance,ADC_HandleTypeDef &hadc, ADC_InjectionConfTypeDef &sConfigInjected, int index);
+int _adc_init(Stm32CurrentSenseParams* cs_params, ADC_TypeDef *Instance,ADC_HandleTypeDef* hadc);
+int _adc_channel_config(Stm32CurrentSenseParams* cs_params, ADC_TypeDef *Instance,ADC_HandleTypeDef* hadc, ADC_InjectionConfTypeDef* sConfigInjected, int index);
 void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const int pinB, const int pinC);
+ADC_HandleTypeDef *_adc_get_handle(ADC_TypeDef* Instance);
+ADC_InjectionConfTypeDef *_adc_get_config(ADC_TypeDef* Instance);
+int _start_ADC(ADC_HandleTypeDef* hadc);
 
 #endif
 #endif
