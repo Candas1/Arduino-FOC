@@ -15,7 +15,7 @@ bool needs_downsample[ADC_COUNT] = {1};
 uint8_t tim_downsample[ADC_COUNT] = {0};
 
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
-uint8_t use_adc_interrupt = 1;
+uint8_t use_adc_interrupt = 0;
 #else
 uint8_t use_adc_interrupt = 0;
 #endif
@@ -32,7 +32,8 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
     .pins = { pinA, pinB, pinC },
     .adc_voltage_conv = (_ADC_VOLTAGE)/(_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
-    .trigger_flag = NP,
+    .inj_trigger = NP,
+    .reg_trigger = NP,
   };
 
   return params;
@@ -57,7 +58,8 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     .pins={(int)NOT_SET, (int)NOT_SET, (int)NOT_SET},
     .adc_voltage_conv = (_ADC_VOLTAGE) / (_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
-    .trigger_flag = NP,
+    .inj_trigger = NP,
+    .reg_trigger = NP,
   };
   _adc_gpio_init(cs_params, pinA,pinB,pinC);
 
@@ -90,8 +92,11 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   // automating TRGO flag finding - hardware specific
   uint8_t tim_num = 0;
   while(driver_params->timers[tim_num] != NP && tim_num < 6){
-    cs_params->trigger_flag = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
-    if(cs_params->trigger_flag == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
+    cs_params->inj_trigger = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
+    if(cs_params->inj_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
+
+    cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
+    if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
 
     // this will be the timer with which the ADC will sync
     cs_params->timer_handle = driver_params->timers[tim_num-1];
@@ -108,15 +113,15 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_ADC_pin(cs_params->pins[i],cs_params->trigger_flag);
+      cs_params->samples[i] = _add_ADC_pin(cs_params->pins[i],cs_params->inj_trigger,0);
       if (cs_params->samples[i] == -1) return -1;
     }    
   }
   
   #ifdef ARDUINO_B_G431B_ESC1
-  if (_add_ADC_pin(A_POTENTIOMETER,cs_params->trigger_flag) == -1) return -1;
-  if (_add_ADC_pin(A_TEMPERATURE,cs_params->trigger_flag) == -1) return -1;
-  //if (_add_ADC_pin(A_VBUS,cs_params->trigger_flag) == -1) return -1;
+  if (_add_ADC_pin(A_POTENTIOMETER,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_pin(A_TEMPERATURE,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_pin(A_VBUS,cs_params->reg_trigger,1) == -1) return -1;
   #endif
 
   if (_init_ADCs() != 0) return -1; 
