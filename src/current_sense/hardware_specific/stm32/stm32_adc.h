@@ -74,12 +74,13 @@ uint32_t _getADCChannel(PinName pin);
 uint32_t _getInjADCRank(int index);
 uint32_t _getRegADCRank(int index);
 uint32_t _getDMARequest(int index);
-DMA_Channel_TypeDef *_getDMAChannel(int index);
+uint32_t _getDMAChannel(int index);
 
 #ifdef ARDUINO_B_G431B_ESC1
 void _configureOPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
 #endif
 void _configureOPAMPs(void);
+void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, uint32_t channel, uint32_t request);
 
 #endif
 #endif

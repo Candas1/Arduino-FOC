@@ -72,9 +72,14 @@ void _configureOPAMPs(void){
 #endif
 }
 
-void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Channel_TypeDef* channel, uint32_t request) {
+void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, uint32_t channel, uint32_t request) {
+  #if defined(STM32G4xx)
   hdma_adc->Instance = channel;
   hdma_adc->Init.Request = request;
+  #endif
+  #if defined(STM32F4xx)
+  hdma_adc->Init.Channel = channel;
+  #endif
   hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
   hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
   hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
@@ -166,7 +171,7 @@ int _add_ADC_pin(uint32_t pin,int32_t trigger, int type){
       defined(STM32L5xx) || defined(STM32WBxx)
   if (!IS_ADC_CHANNEL(sample.handle, sample.channel)) {
   #else
-  if (!IS_ADC_CHANNEL(AdcChannelConf.Channel)) {
+  if (!IS_ADC_CHANNEL(sample.channel)) {
   #endif
     return -1;
   }
@@ -345,8 +350,10 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
     return -1;
   }
 
+  #endif
+
   return 0;
-#endif
+  
 }
 
 
@@ -445,14 +452,15 @@ int _start_ADCs(void){
 
 int _start_DMA(ADC_HandleTypeDef* hadc){
   int status = 0;
-    
+  #if defined(__HAL_RCC_DMAMUX1_CLK_ENABLE)
   __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  #endif 
   __HAL_RCC_DMA1_CLK_ENABLE();
   
   int adc_index = _adcToIndex(hadc->Instance);
   
   DMA_HandleTypeDef* hdma_adc = _dma_get_handle(hadc->Instance);
-  DMA_Channel_TypeDef* dma_channel = _getDMAChannel(adc_index); 
+  uint32_t dma_channel = _getDMAChannel(adc_index); 
   uint32_t dma_request = _getDMARequest(adc_index);
   MX_DMA1_Init(hadc,hdma_adc,dma_channel, dma_request);
   
@@ -516,6 +524,7 @@ uint32_t _read_adc_pin(int pin){
 
 uint32_t _getDMARequest(int index){
   switch(index){
+    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
     case 0:
       return DMA_REQUEST_ADC1;
     #ifdef DMA_REQUEST_ADC2
@@ -534,14 +543,36 @@ uint32_t _getDMARequest(int index){
     case 4:
       return DMA_REQUEST_ADC5;
     #endif
+    #endif
     default:
       return 0;
   }
 }
 
-DMA_Channel_TypeDef *_getDMAChannel(int index){
+uint32_t _getDMAChannel(int index){
   switch(index){
-    case 0:
+    #if defined(STM32F4xx)
+    case 0:   
+      return DMA_CHANNEL_0;
+    #ifdef DMA_CHANNEL_0
+    case 1:
+      return DMA_CHANNEL_1;
+    #endif
+    #ifdef DMA_CHANNEL_2
+    case 2:
+      return DMA_CHANNEL_2;
+    #endif
+    #ifdef DMA_CHANNEL_3
+    case 3:
+      return DMA_CHANNEL_3;
+    #endif
+    #ifdef DMA_CHANNEL_4
+    case 4:
+      return DMA_CHANNEL_4;
+    #endif
+    #endif
+    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
+    case 0:   
       return DMA1_Channel1;
     #ifdef DMA1_Channel2
     case 1:
@@ -558,6 +589,7 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
     #ifdef DMA1_Channel5
     case 4:
       return DMA1_Channel5;
+    #endif
     #endif
     default:
       return 0;
@@ -583,6 +615,7 @@ uint32_t _getInjADCRank(int index)
 uint32_t _getRegADCRank(int index)
 {
   switch(index){
+    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
     case 1:
       return ADC_REGULAR_RANK_1;
     case 2:
@@ -615,8 +648,9 @@ uint32_t _getRegADCRank(int index)
       return ADC_REGULAR_RANK_15;
     case 16:
       return ADC_REGULAR_RANK_16;
+    #endif
     default:
-      return 0;
+      return index + 1;
   }
 }
 
