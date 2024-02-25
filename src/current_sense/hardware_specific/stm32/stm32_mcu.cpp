@@ -38,11 +38,18 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
   return params;
 }
 
+#ifdef ARDUINO_B_G431B_ESC1  
 // function reading an ADC value and returning the read voltage
+float _readADCVoltageInline(const int pinA, const void* cs_params){
+  uint32_t raw_adc = _read_adc_pin(pinA);
+  return raw_adc * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;  
+}
+#else
 __attribute__((weak))  float _readADCVoltageInline(const int pinA, const void* cs_params){
   uint32_t raw_adc = analogRead(pinA);
   return raw_adc * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
 }
+#endif
 
 void* _configureADCLowSide(const void* driver_params, const int pinA, const int pinB, const int pinC){
 
@@ -53,8 +60,6 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     .trigger_flag = NP,
   };
   _adc_gpio_init(cs_params, pinA,pinB,pinC);
-
-  _configureOPAMPs();
 
   if(_adc_init(cs_params, (STM32DriverParams*)driver_params) != 0) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
   return cs_params;
@@ -101,23 +106,20 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     return -1;
   }
 
-  // One round for initializing the adc and counting the number of channels
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      Instance = (ADC_TypeDef*)pinmap_peripheral(analogInputToPinName(cs_params->pins[i]), PinMap_ADC);
-      status = _adc_init(Instance,_adc_get_handle(Instance));
-      if (status!= 0) return -1;
+      cs_params->samples[i] = _add_ADC_pin(cs_params->pins[i],cs_params->trigger_flag);
+      if (cs_params->samples[i] == -1) return -1;
     }    
   }
+  
+  #ifdef ARDUINO_B_G431B_ESC1
+  if (_add_ADC_pin(A_POTENTIOMETER,cs_params->trigger_flag) == -1) return -1;
+  if (_add_ADC_pin(A_TEMPERATURE,cs_params->trigger_flag) == -1) return -1;
+  //if (_add_ADC_pin(A_VBUS,cs_params->trigger_flag) == -1) return -1;
+  #endif
 
-  // One round for configuring the channels with the total InjectedNbrOfConversion
-  for(int i=0;i<3;i++){
-    if _isset(cs_params->pins[i]){
-      Instance = (ADC_TypeDef*)pinmap_peripheral(analogInputToPinName(cs_params->pins[i]), PinMap_ADC);
-      cs_params->samples[i] = _adc_channel_config(_adc_get_handle(Instance),cs_params->pins[i],cs_params->trigger_flag);
-      if (cs_params->samples[i].adc_handle == 0) return -1;
-    }    
-  } 
+  if (_init_ADCs() != 0) return -1; 
 
   return 0;
 }
@@ -142,7 +144,7 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
     cs_params->timer_handle->getHandle()->Instance->CR1 |= TIM_CR1_DIR;
     cs_params->timer_handle->getHandle()->Instance->CNT =  cs_params->timer_handle->getHandle()->Instance->ARR;
     // remember that this timer has repetition counter - no need to downsample
-    needs_downsample[_adcToIndex(cs_params->samples[0].adc_handle)] = 0;
+    needs_downsample[0] = 0;
   }else{
     if(!use_adc_interrupt){
       // If the timer has no repetition counter, it needs to use the interrupt to downsample for low side sensing
@@ -167,9 +169,7 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
   if (!use_adc_interrupt) _read_ADCs(); // Fill the adc buffer now in case no interrup is used
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
-      int index = ((Stm32CurrentSenseParams*)cs_params)->samples[i].adc_index;
-      int adc_index = _adcToIndex(((Stm32CurrentSenseParams*)cs_params)->samples[i].adc_handle); 
-      return _read_inj_val(adc_index,index) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return _read_adc_sample(((Stm32CurrentSenseParams*)cs_params)->samples[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
     }
   } 
   return 0;

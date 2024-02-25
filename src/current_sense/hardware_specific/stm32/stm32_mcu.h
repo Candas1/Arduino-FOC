@@ -18,7 +18,7 @@
 typedef struct Stm32CurrentSenseParams {
   int pins[3] = {(int)NOT_SET};
   float adc_voltage_conv;
-  Stm32ADCSample samples[3] = {NP,NP,NP};
+  int samples[3] = {NP,NP,NP};
   uint32_t trigger_flag = NP;
   HardwareTimer* timer_handle = NP;
 } Stm32CurrentSenseParams;

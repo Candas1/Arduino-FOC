@@ -40,14 +40,20 @@
 #define ADC_COUNT (ADC1_COUNT + ADC2_COUNT + ADC3_COUNT + ADC4_COUNT + ADC5_COUNT)
 
 typedef struct Stm32ADCSample {
-  ADC_HandleTypeDef* adc_handle = NP;
-  uint32_t adc_rank = NP;
+  ADC_TypeDef* Instance = NP;
+  ADC_HandleTypeDef* handle = NP;
+  int pin = NP;
+  uint32_t rank = NP;
+  uint32_t channel = NP;
   uint adc_index = NP;
+  int index = NP;
+  uint32_t trigger = NP;
 } Stm32ADCSample;
 
-
-int _adc_init(ADC_TypeDef *Instance,ADC_HandleTypeDef* hadc);
-Stm32ADCSample _adc_channel_config(ADC_HandleTypeDef* hadc, int pin, int32_t trigger);
+int _add_ADC_pin(uint32_t pin,int32_t trigger);
+int _init_ADCs();
+int _adc_init(Stm32ADCSample sample);
+int _adc_channel_config(Stm32ADCSample sample);
 ADC_HandleTypeDef *_adc_get_handle(ADC_TypeDef* Instance);
 ADC_InjectionConfTypeDef *_adc_get_config(ADC_TypeDef* Instance);
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
@@ -56,7 +62,11 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc);
 int _start_ADCs(void);
 void _read_ADC(ADC_HandleTypeDef* hadc);
 void _read_ADCs(void);
-uint32_t _read_inj_val(int adc_index,int index);
+uint32_t _read_adc_val(int adc_index,int index);
+uint32_t _read_adc_sample(int index);
+uint32_t _read_adc_pin(int pin);
+uint32_t _getADCChannel(PinName pin);
+uint32_t _getInjADCRank(int index);
 
 #ifdef ARDUINO_B_G431B_ESC1
 void _configureOPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
