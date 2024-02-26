@@ -31,10 +31,13 @@ OPAMP_HandleTypeDef hopamp2;
 OPAMP_HandleTypeDef hopamp3;
 #endif
 
+#define MAX_REG_ADC_CHANNELS 16
+#define MAX_INJ_ADC_CHANNELS 4
+
 // array of values of 4 injected channels per adc instance (5)
-uint16_t adc_inj_val[ADC_COUNT][4]={0};
-uint16_t adc_reg_val[ADC_COUNT][16]={0};
-Stm32ADCSample samples[ADC_COUNT * 20] = {}; // The maximum number of sample is the number of ADC * 4 injected + 16 regular
+uint16_t adc_reg_val[ADC_COUNT][MAX_REG_ADC_CHANNELS]={0};
+uint16_t adc_inj_val[ADC_COUNT][MAX_INJ_ADC_CHANNELS]={0};
+Stm32ADCSample samples[ADC_COUNT * (MAX_REG_ADC_CHANNELS+MAX_INJ_ADC_CHANNELS)] = {}; // The maximum number of sample is the number of ADC * 4 injected + 16 regular
 int sample_count = 0;
 
 ADC_HandleTypeDef* adc_handles[ADC_COUNT] = {NP};
@@ -142,21 +145,32 @@ int _add_ADC_pin(uint32_t pin,int32_t trigger, int type){
   sample.type      = type; // 0 = inj, 1 = reg
   sample.handle    = hadc;
   sample.pin       = pin;
+  sample.channel   = _getADCChannel(pinname);
+  sample.adc_index = adc_index;
+  sample.trigger   = trigger;
+  
   if (type == 0){
+    if (adc_inj_channel_count[adc_index] == MAX_INJ_ADC_CHANNELS){
+      #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: max inj channel reached: ", (int) sample.adc_index+1);
+      #endif  
+    }
     sample.rank = _getInjADCRank(adc_inj_channel_count[adc_index] + 1);
     adc_inj_trigger[adc_index] = trigger;
     sample.index = adc_inj_channel_count[adc_index];
     adc_inj_channel_count[adc_index]++; // Increment total injected channel count for this ADC
   }else{
+    if (adc_reg_channel_count[adc_index] == MAX_REG_ADC_CHANNELS){
+      #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: max reg channel reached: ", (int) sample.adc_index+1);
+      #endif  
+    }
     sample.rank = _getRegADCRank(adc_reg_channel_count[adc_index] + 1);
     adc_reg_trigger[adc_index] = trigger;
     sample.index = adc_reg_channel_count[adc_index];
     adc_reg_channel_count[adc_index]++; // Increment total regular channel count for this ADC
   }
-  sample.channel   = _getADCChannel(pinname);
-  sample.adc_index = adc_index;
-  sample.trigger   = trigger;
-
+  
   #if defined(STM32F1xx)
   sample.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   #endif
@@ -167,6 +181,7 @@ int _add_ADC_pin(uint32_t pin,int32_t trigger, int type){
   sample.SamplingTime = ADC_SAMPLETIME_2CYCLES_5;
   #endif
 
+  /*
   #if defined(STM32G4xx) || defined(STM32H5xx) || defined(STM32L4xx) || \
       defined(STM32L5xx) || defined(STM32WBxx)
   if (!IS_ADC_CHANNEL(sample.handle, sample.channel)) {
@@ -175,6 +190,7 @@ int _add_ADC_pin(uint32_t pin,int32_t trigger, int type){
   #endif
     return -1;
   }
+  */
 
   samples[sample_count] = sample;
   sample_count++;  
@@ -469,8 +485,9 @@ int _start_DMA(ADC_HandleTypeDef* hadc){
   DMA_Channel_TypeDef* dma_channel = _getDMAChannel(adc_index); 
   uint32_t dma_request = _getDMARequest(adc_index);
   MX_DMA1_Init(hadc,hdma_adc,dma_channel, dma_request);
-  
-  if (HAL_ADC_Start_DMA(hadc, (uint32_t*)adc_reg_val, adc_reg_channel_count[adc_index]) != HAL_OK) 
+
+  uint32_t* address = (uint32_t*)(adc_reg_val) + (MAX_REG_ADC_CHANNELS/2*adc_index); // Calculate the address for the right row in the array
+  if (HAL_ADC_Start_DMA(hadc,  address , adc_reg_channel_count[adc_index]) != HAL_OK) 
   {
     SIMPLEFOC_DEBUG("DMA read init failed");
     return -1;

@@ -15,7 +15,7 @@ bool needs_downsample[ADC_COUNT] = {1};
 uint8_t tim_downsample[ADC_COUNT] = {0};
 
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
-uint8_t use_adc_interrupt = 0;
+uint8_t use_adc_interrupt = 1;
 #else
 uint8_t use_adc_interrupt = 0;
 #endif
@@ -119,6 +119,9 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   }
   
   #ifdef ARDUINO_B_G431B_ESC1
+  if (_add_ADC_pin(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_pin(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_pin(A_BEMF3,cs_params->reg_trigger,1) == -1) return -1;
   if (_add_ADC_pin(A_POTENTIOMETER,cs_params->reg_trigger,1) == -1) return -1;
   if (_add_ADC_pin(A_TEMPERATURE,cs_params->reg_trigger,1) == -1) return -1;
   if (_add_ADC_pin(A_VBUS,cs_params->reg_trigger,1) == -1) return -1;
