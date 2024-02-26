@@ -72,7 +72,7 @@ void _configureOPAMPs(void){
 #endif
 }
 
-void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, uint32_t channel, uint32_t request) {
+void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Channel_TypeDef *channel, uint32_t request) {
   #if defined(STM32G4xx)
   hdma_adc->Instance = channel;
   hdma_adc->Init.Request = request;
@@ -466,7 +466,7 @@ int _start_DMA(ADC_HandleTypeDef* hadc){
   int adc_index = _adcToIndex(hadc->Instance);
   
   DMA_HandleTypeDef* hdma_adc = _dma_get_handle(hadc->Instance);
-  uint32_t dma_channel = _getDMAChannel(adc_index); 
+  DMA_Channel_TypeDef* dma_channel = _getDMAChannel(adc_index); 
   uint32_t dma_request = _getDMARequest(adc_index);
   MX_DMA1_Init(hadc,hdma_adc,dma_channel, dma_request);
   
@@ -555,7 +555,7 @@ uint32_t _getDMARequest(int index){
   }
 }
 
-uint32_t _getDMAChannel(int index){
+DMA_Channel_TypeDef *_getDMAChannel(int index){
   switch(index){
     #if defined(STM32F4xx)
     case 0:   
