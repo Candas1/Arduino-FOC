@@ -158,7 +158,7 @@ int _add_ADC_pin(uint32_t pin,int32_t trigger, int type){
   sample.trigger   = trigger;
 
   #if defined(STM32F1xx)
-  sample.SamplingTime = ADC_SAMPLETIME_1CYCLE_5
+  sample.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   #endif
   #if defined(STM32F4xx)
   sample.SamplingTime = ADC_SAMPLETIME_3CYCLES;
@@ -208,8 +208,10 @@ int _adc_init(Stm32ADCSample sample)
   #ifdef SIMPLEFOC_STM32_DEBUG
     SIMPLEFOC_DEBUG("STM32-CS: Using ADC: ", (int) sample.adc_index+1);
   #endif
-
+  
+  #ifdef ADC_CLOCK_SYNC_PCLK_DIV4
   sample.handle->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  #endif
   #ifdef ADC_RESOLUTION_12B
   sample.handle->Init.Resolution = ADC_RESOLUTION_12B;
   #endif
@@ -235,7 +237,10 @@ int _adc_init(Stm32ADCSample sample)
   #if !defined(STM32F0xx) && !defined(STM32L0xx)
   sample.handle->Init.NbrOfConversion = max(1,adc_reg_channel_count[sample.adc_index]); // Minimum 1 for analogread to work
   #endif
+  #if !defined(STM32F1xx) && !defined(STM32H7xx) && !defined(STM32MP1xx) && \
+      !defined(ADC1_V2_5)
   sample.handle->Init.DMAContinuousRequests = ENABLE;
+  #endif
   #ifdef ADC_EOC_SINGLE_CONV
   sample.handle->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   #endif
@@ -258,7 +263,7 @@ int _adc_inj_channel_config(Stm32ADCSample sample)
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
   sConfigInjected.ExternalTrigInjecConv = adc_inj_trigger[sample.adc_index];
-  #ifdef ADC_EXTERNALTRIGINJECCONV_EDGE_RISING
+  #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   #endif
   #ifdef ADC_EXTERNALTRIGINJECCONVEDGE_RISING
@@ -331,7 +336,8 @@ int _adc_reg_channel_config(Stm32ADCSample sample)
 int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   if (hadc->Instance == 0) return 0; // ADC not initialized
   if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
-  
+
+
   // Start the adc calibration
   #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
   /*##-2.1- Calibrate ADC then Start the conversion process ####################*/
