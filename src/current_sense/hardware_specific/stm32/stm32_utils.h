@@ -19,6 +19,13 @@ uint32_t _timerToRegularTRGO(HardwareTimer* timer);
 // function returning index of the ADC instance
 int _adcToIndex(ADC_HandleTypeDef *AdcHandle);
 int _adcToIndex(ADC_TypeDef *AdcHandle);
+uint32_t _getADCChannel(PinName pin);
+uint32_t _getInjADCRank(int index);
+uint32_t _getRegADCRank(int index);
+uint32_t _getDMARequest(int index);
+DMA_Channel_TypeDef *_getDMAChannel(int index);
+ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance);
+
 
 #endif
 

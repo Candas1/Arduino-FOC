@@ -15,7 +15,7 @@ bool needs_downsample[ADC_COUNT] = {1};
 uint8_t tim_downsample[ADC_COUNT] = {0};
 
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
-uint8_t use_adc_interrupt = 1;
+uint8_t use_adc_interrupt = 0;
 #else
 uint8_t use_adc_interrupt = 0;
 #endif
@@ -42,7 +42,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
 #ifdef ARDUINO_B_G431B_ESC1  
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageInline(const int pinA, const void* cs_params){
-  uint32_t raw_adc = _read_adc_pin(pinA);
+  uint32_t raw_adc = _read_ADC_pin(pinA);
   return raw_adc * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;  
 }
 #else
@@ -113,21 +113,21 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_ADC_pin(cs_params->pins[i],cs_params->inj_trigger,0);
+      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->inj_trigger,0);
       if (cs_params->samples[i] == -1) return -1;
     }    
   }
   
   #ifdef ARDUINO_B_G431B_ESC1
-  if (_add_ADC_pin(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_pin(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_pin(A_BEMF3,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_pin(A_POTENTIOMETER,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_pin(A_TEMPERATURE,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_pin(A_VBUS,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_BEMF3,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_POTENTIOMETER,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_TEMPERATURE,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(A_VBUS,cs_params->reg_trigger,1) == -1) return -1;
   #endif
 
-  if (_init_ADCs() != 0) return -1; 
+  if (_init_ADCs() == -1) return -1; 
 
   return 0;
 }
@@ -177,7 +177,7 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
   if (!use_adc_interrupt) _read_ADCs(); // Fill the adc buffer now in case no interrup is used
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
-      return _read_adc_sample(((Stm32CurrentSenseParams*)cs_params)->samples[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return _read_ADC_sample(((Stm32CurrentSenseParams*)cs_params)->samples[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
     }
   } 
   return 0;
@@ -194,6 +194,7 @@ extern "C" {
       return;
     }
     
+    //_start_reg_conversion_ADCs();
     _read_ADCs(); // fill the ADC buffer
   }
 }

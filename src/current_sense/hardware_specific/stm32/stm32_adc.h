@@ -48,39 +48,32 @@ typedef struct Stm32ADCSample {
   uint32_t channel = NP;
   uint adc_index = NP;
   int index = NP;
-  uint32_t trigger = NP;
   uint32_t SamplingTime = NP;
 } Stm32ADCSample;
 
-int _add_ADC_pin(uint32_t pin,int32_t trigger,int type);
+int _add_ADC_sample(uint32_t pin,int32_t trigger,int type);
 int _init_ADCs();
-int _adc_init(Stm32ADCSample sample);
-int _adc_inj_channel_config(Stm32ADCSample sample);
-int _adc_reg_channel_config(Stm32ADCSample sample);
-ADC_HandleTypeDef *_adc_get_handle(ADC_TypeDef* Instance);
-ADC_InjectionConfTypeDef *_adc_get_config(ADC_TypeDef* Instance);
+int _init_ADC(Stm32ADCSample sample);
+int _init_DMA(ADC_HandleTypeDef *hadc);
+#ifdef ARDUINO_B_G431B_ESC1
+int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
+#endif
+int _init_OPAMPs(void);
+int _add_inj_ADC_channel_config(Stm32ADCSample sample);
+int _add_reg_ADC_channel_config(Stm32ADCSample sample);
+
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC_IT(ADC_HandleTypeDef* hadc);
 int _start_ADCs(void);
 int _start_DMA(ADC_HandleTypeDef* hadc);
+void _start_reg_conversion_ADCs(void);
 void _read_ADC(ADC_HandleTypeDef* hadc);
 void _read_ADCs(void);
-uint32_t _read_adc_buf(int adc_index,int index);
-uint32_t _read_adc_dma(int adc_index,int index);
-uint32_t _read_adc_sample(int index);
-uint32_t _read_adc_pin(int pin);
-uint32_t _getADCChannel(PinName pin);
-uint32_t _getInjADCRank(int index);
-uint32_t _getRegADCRank(int index);
-uint32_t _getDMARequest(int index);
-DMA_Channel_TypeDef *_getDMAChannel(int index);
-
-#ifdef ARDUINO_B_G431B_ESC1
-void _configureOPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
-#endif
-void _configureOPAMPs(void);
-void MX_DMA1_Init(ADC_HandleTypeDef *hadc, DMA_HandleTypeDef *hdma_adc, DMA_Channel_TypeDef channel, uint32_t request);
+uint32_t _read_ADC_buf(int adc_index,int index);
+uint32_t _read_DMA_buf(int adc_index,int index);
+uint32_t _read_ADC_sample(int index);
+uint32_t _read_ADC_pin(int pin);
 
 #endif
 #endif
