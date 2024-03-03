@@ -294,7 +294,11 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
   sConfigInjected.ExternalTrigInjecConv = adc_inj_trigger[sample.adc_index];
-  #if defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx)
+  #if defined(STM32F4xx) 
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
+  #endif
+  
+  #if defined(STM32G4xx) || defined(STM32L4xx)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   #endif
   

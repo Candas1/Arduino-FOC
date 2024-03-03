@@ -499,10 +499,10 @@ uint32_t _getADCChannel(PinName pin)
 }
 
 uint32_t _is_enabled_ADC(ADC_HandleTypeDef* hadc){
-  #if defined(STM32F1xx) || defined(STM32F4xx)
+  #if defined(STM32F1xx)
   return ADC_IS_ENABLE(hadc);
   #endif
-  #if defined(STM32G4xx) || defined(STM32L4xx)
+  #if defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx)
   return LL_ADC_IsEnabled(hadc->Instance);
   #endif 
 }
