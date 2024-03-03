@@ -15,7 +15,7 @@ bool needs_downsample[ADC_COUNT] = {1};
 uint8_t tim_downsample[ADC_COUNT] = {0};
 
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
-uint8_t use_adc_interrupt = 0;
+uint8_t use_adc_interrupt = 1;
 #else
 uint8_t use_adc_interrupt = 0;
 #endif
@@ -39,7 +39,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
   return params;
 }
 
-#ifdef ARDUINO_B_G431B_ESC1  
+#ifdef STM32F4xx //ARDUINO_B_G431B_ESC1  
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageInline(const int pinA, const void* cs_params){
   uint32_t raw_adc = _read_ADC_pin(pinA);
@@ -59,7 +59,7 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     .adc_voltage_conv = (_ADC_VOLTAGE) / (_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
-    .reg_trigger = NP,
+    .reg_trigger = ADC_SOFTWARE_START,
   };
   _adc_gpio_init(cs_params, pinA,pinB,pinC);
 
@@ -95,8 +95,8 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     cs_params->inj_trigger = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
     if(cs_params->inj_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
 
-    cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
-    if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
+    //cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
+    //if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
 
     // this will be the timer with which the ADC will sync
     cs_params->timer_handle = driver_params->timers[tim_num-1];
@@ -118,6 +118,9 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     }    
   }
   
+  if (_add_ADC_sample(PA2,cs_params->reg_trigger,1) == -1) return -1;
+  if (_add_ADC_sample(PA3,cs_params->reg_trigger,1) == -1) return -1;
+
   #ifdef ARDUINO_B_G431B_ESC1
   if (_add_ADC_sample(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
   if (_add_ADC_sample(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
@@ -194,6 +197,8 @@ extern "C" {
       return;
     }
     
+    _start_reg_conversion_ADCs();
+
     //_start_reg_conversion_ADCs();
     _read_ADCs(); // fill the ADC buffer
   }

@@ -252,6 +252,40 @@ uint32_t _getDMARequest(int index){
   }
 }
 
+DMA_Stream_TypeDef *_getDMAStream(int index){
+  switch(index){
+    #if defined(STM32F4xx)
+    #ifdef DMA1_Stream0
+    case 0:
+      return DMA1_Stream0;
+    #endif
+    #ifdef DMA1_Stream1
+    case 1:
+      return DMA1_Stream1;
+    #endif
+    #ifdef DMA1_Stream2
+    case 2:
+      return DMA1_Stream2;
+    #endif
+    #ifdef DMA1_Stream3
+    case 3:
+      return DMA1_Stream3;
+    #endif
+    #ifdef DMA1_Stream4
+    case 4:
+      return DMA1_Stream4;
+    #endif
+    #ifdef DMA1_Stream5
+    case 5:
+      return DMA1_Stream5;
+    #endif
+    #endif
+    default:
+      return 0;
+  }
+}
+
+
 #if defined(STM32F4xx)
 uint32_t _getDMAChannel(int index){
 #else

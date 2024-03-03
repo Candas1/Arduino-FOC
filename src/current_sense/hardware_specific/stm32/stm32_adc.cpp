@@ -129,6 +129,7 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   hdma_adc->Init.Request = _getDMARequest(adc_index);
   #endif
   #if defined(STM32F4xx)
+  hdma_adc->Instance = _getDMAStream(adc_index);
   hdma_adc->Init.Channel = _getDMAChannel(adc_index);
   #endif
   hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
@@ -275,6 +276,8 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.Overrun = ADC_OVR_DATA_PRESERVED;
   #endif
 
+
+  // Init DMA only if there are regular channels to be sampled on this ADC
   if (adc_reg_channel_count[sample.adc_index] > 0){
     if (_init_DMA(sample.handle) == -1) return -1;
   }
@@ -465,12 +468,13 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 void _start_reg_conversion_ADCs(void){
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
-      if (adc_reg_channel_count[i] > 0){
+      if (adc_reg_channel_count[i] > 0 && adc_reg_trigger[i] == ADC_SOFTWARE_START){
         #if defined(STM32F1xx)
         SET_BIT(adc_handles[i]->Instance->CR2, (ADC_CR2_SWSTART | ADC_CR2_EXTTRIG));
         #endif
         #if defined(STM32F4xx)
-        LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
+        //LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
+        _start_DMA(adc_handles[i]);
         #endif
         #if defined(STM32G4xx) || defined(STM32L4xx) 
         LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
@@ -507,6 +511,9 @@ int _start_ADCs(void){
 
 int _start_DMA(ADC_HandleTypeDef* hadc){
   int adc_index = _adcToIndex(hadc->Instance);
+
+  // Start DMA only if there are regular channels to be sampled on this ADC
+  if (adc_reg_channel_count[adc_index] == 0) return 0;
       
   uint32_t* address = (uint32_t*)(adc_reg_val) + (MAX_REG_ADC_CHANNELS/2*adc_index); // Calculate the address for the right row in the array
   if (HAL_ADC_Start_DMA(hadc,  address , adc_reg_channel_count[adc_index]) != HAL_OK) 
