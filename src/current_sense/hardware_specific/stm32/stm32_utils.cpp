@@ -252,33 +252,15 @@ uint32_t _getDMARequest(int index){
   }
 }
 
-#if defined(STM32F4xx)
+#if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
 DMA_Stream_TypeDef *_getDMAStream(int index){
   switch(index){
-    #ifdef DMA1_Stream0
     case 0:
-      return DMA1_Stream0;
-    #endif
-    #ifdef DMA1_Stream1
+      return DMA2_Stream0;
     case 1:
-      return DMA1_Stream1;
-    #endif
-    #ifdef DMA1_Stream2
+      return DMA2_Stream2;
     case 2:
-      return DMA1_Stream2;
-    #endif
-    #ifdef DMA1_Stream3
-    case 3:
-      return DMA1_Stream3;
-    #endif
-    #ifdef DMA1_Stream4
-    case 4:
-      return DMA1_Stream4;
-    #endif
-    #ifdef DMA1_Stream5
-    case 5:
-      return DMA1_Stream5;
-    #endif
+      return DMA2_Stream1;
     default:
       return 0;
   }
@@ -286,37 +268,19 @@ DMA_Stream_TypeDef *_getDMAStream(int index){
 #endif
 
 
-#if defined(STM32F4xx)
+#if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
 uint32_t _getDMAChannel(int index){
 #else
 DMA_Channel_TypeDef *_getDMAChannel(int index){
 #endif
   switch(index){
-    #if defined(STM32F4xx)
-    #ifdef DMA_CHANNEL_0
+    #if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
     case 0:   
       return DMA_CHANNEL_0;
-    #endif
-    #ifdef DMA_CHANNEL_1
     case 1:
       return DMA_CHANNEL_1;
-    #endif
-    #ifdef DMA_CHANNEL_2
     case 2:
       return DMA_CHANNEL_2;
-    #endif
-    #ifdef DMA_CHANNEL_3
-    case 3:
-      return DMA_CHANNEL_3;
-    #endif
-    #ifdef DMA_CHANNEL_4
-    case 4:
-      return DMA_CHANNEL_4;
-    #endif
-    #ifdef DMA_CHANNEL_5
-    case 5:
-      return DMA_CHANNEL_5;
-    #endif
     #endif
 
     #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)

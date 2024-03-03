@@ -118,7 +118,12 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   #if defined(__HAL_RCC_DMAMUX1_CLK_ENABLE)
   __HAL_RCC_DMAMUX1_CLK_ENABLE();
   #endif 
+
+  #if defined(STM32F4xx) 
+  __HAL_RCC_DMA2_CLK_ENABLE();
+  #else
   __HAL_RCC_DMA1_CLK_ENABLE();
+  #endif
   
   int adc_index = _adcToIndex(hadc->Instance);
   
@@ -139,6 +144,7 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   hdma_adc->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
   hdma_adc->Init.Mode = DMA_CIRCULAR;
   hdma_adc->Init.Priority = DMA_PRIORITY_LOW;
+
   HAL_DMA_DeInit(hdma_adc);
   if (HAL_DMA_Init(hdma_adc) != HAL_OK)
   {
@@ -494,6 +500,7 @@ int _start_ADCs(void){
      
       if(_calibrate_ADC(adc_handles[i]) == -1) return -1;
 
+      // For now only ADC1 is trigering the interrupt
       if ((adc_handles[i])->Instance == ADC1){
         if(_start_ADC_IT(adc_handles[i]) == -1) return -1;
       }else{
