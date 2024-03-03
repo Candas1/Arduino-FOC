@@ -294,10 +294,10 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
   sConfigInjected.ExternalTrigInjecConv = adc_inj_trigger[sample.adc_index];
-  #ifdef ADC_EXTERNALTRIGINJECCONV_EDGE_RISING
+  #if defined(STM32F4xx)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   #endif
-  #ifdef ADC_EXTERNALTRIGINJECCONVEDGE_RISING
+  #if defined(STM32G4xx) || defined(STM32L4xx)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;  
   #endif
   
@@ -366,8 +366,7 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample)
 // Calibrates the ADC if initialized and not already started
 int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
-
+  if (ADC_IS_ENABLE(hadc)) return 0; // ADC already started
 
   // Start the adc calibration
   #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
@@ -398,7 +397,7 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
 int _start_ADC(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
+  if (ADC_IS_ENABLE(hadc)) return 0; // ADC already started
   
   if (HAL_ADCEx_InjectedStart(hadc) !=  HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
@@ -413,7 +412,7 @@ int _start_ADC(ADC_HandleTypeDef* hadc){
 int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (LL_ADC_IsEnabled(hadc->Instance)) return 0; // ADC already started
+  if (ADC_IS_ENABLE(hadc)) return 0; // ADC already started
       
   // enable interrupt
   #if defined(STM32F4xx)
@@ -466,9 +465,13 @@ void _start_reg_conversion_ADCs(void){
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
       if (adc_reg_channel_count[i] > 0){
+        #if defined(STM32F1xx)
+        SET_BIT(adc_handles[i]->Instance->CR2, (ADC_CR2_SWSTART | ADC_CR2_EXTTRIG));
+        #endif
         #if defined(STM32F4xx)
         LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
-        #else
+        #endif
+        #if defined(STM32G4xx) || defined(STM32L4xx) 
         LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
         #endif
       }
@@ -519,7 +522,7 @@ int _start_DMA(ADC_HandleTypeDef* hadc){
 void _read_ADC(ADC_HandleTypeDef* hadc){
 
   if (hadc->Instance == 0) return; // skip if ADC not initialized
-  if (!LL_ADC_IsEnabled(hadc->Instance)) return; // skip if ADC not started
+  if (!ADC_IS_ENABLE(hadc)) return; // skip if ADC not started
 
   int adc_index = _adcToIndex(hadc);
   int channel_count = adc_inj_channel_count[_adcToIndex(hadc)];
