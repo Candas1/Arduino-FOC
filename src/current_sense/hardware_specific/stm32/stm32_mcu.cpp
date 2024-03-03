@@ -39,7 +39,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
   return params;
 }
 
-#ifdef STM32F4xx //ARDUINO_B_G431B_ESC1  
+#if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx) 
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageInline(const int pinA, const void* cs_params){
   uint32_t raw_adc = _read_ADC_pin(pinA);
@@ -118,9 +118,6 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     }    
   }
   
-  if (_add_ADC_sample(PA2,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(PA3,cs_params->reg_trigger,1) == -1) return -1;
-
   #ifdef ARDUINO_B_G431B_ESC1
   if (_add_ADC_sample(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
   if (_add_ADC_sample(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
@@ -199,7 +196,6 @@ extern "C" {
     
     _start_reg_conversion_ADCs();
 
-    //_start_reg_conversion_ADCs();
     _read_ADCs(); // fill the ADC buffer
   }
 }

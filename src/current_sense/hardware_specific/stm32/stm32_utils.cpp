@@ -252,9 +252,9 @@ uint32_t _getDMARequest(int index){
   }
 }
 
+#if defined(STM32F4xx)
 DMA_Stream_TypeDef *_getDMAStream(int index){
   switch(index){
-    #if defined(STM32F4xx)
     #ifdef DMA1_Stream0
     case 0:
       return DMA1_Stream0;
@@ -279,11 +279,11 @@ DMA_Stream_TypeDef *_getDMAStream(int index){
     case 5:
       return DMA1_Stream5;
     #endif
-    #endif
     default:
       return 0;
   }
 }
+#endif
 
 
 #if defined(STM32F4xx)

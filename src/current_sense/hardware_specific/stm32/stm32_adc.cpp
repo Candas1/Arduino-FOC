@@ -473,8 +473,7 @@ void _start_reg_conversion_ADCs(void){
         SET_BIT(adc_handles[i]->Instance->CR2, (ADC_CR2_SWSTART | ADC_CR2_EXTTRIG));
         #endif
         #if defined(STM32F4xx)
-        //LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
-        _start_DMA(adc_handles[i]);
+        LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
         #endif
         #if defined(STM32G4xx) || defined(STM32L4xx) 
         LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
