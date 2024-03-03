@@ -29,7 +29,7 @@ uint32_t _getDMAChannel(int index);
 DMA_Channel_TypeDef *_getDMAChannel(int index);
 #endif
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance);
-
+uint32_t _is_enabled_ADC(ADC_HandleTypeDef* hadc);
 
 #endif
 
