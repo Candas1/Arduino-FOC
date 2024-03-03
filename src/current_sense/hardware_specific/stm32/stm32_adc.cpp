@@ -129,7 +129,7 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   hdma_adc->Init.Request = _getDMARequest(adc_index);
   #endif
   #if defined(STM32F4xx)
-  hdma_adc->Init.Channel = channel;
+  hdma_adc->Init.Channel = _getDMAChannel(adc_index);
   #endif
   hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
   hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
@@ -294,7 +294,7 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
   sConfigInjected.ExternalTrigInjecConv = adc_inj_trigger[sample.adc_index];
-  #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
+  #ifdef ADC_EXTERNALTRIGINJECCONV_EDGE_RISING
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   #endif
   #ifdef ADC_EXTERNALTRIGINJECCONVEDGE_RISING
@@ -465,7 +465,13 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 void _start_reg_conversion_ADCs(void){
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
-      if (adc_reg_channel_count[i] > 0) LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
+      if (adc_reg_channel_count[i] > 0){
+        #if defined(STM32F4xx)
+        LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
+        #else
+        LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
+        #endif
+      }
     }
   }
 }

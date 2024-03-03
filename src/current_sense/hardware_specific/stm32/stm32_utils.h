@@ -23,7 +23,11 @@ uint32_t _getADCChannel(PinName pin);
 uint32_t _getInjADCRank(int index);
 uint32_t _getRegADCRank(int index);
 uint32_t _getDMARequest(int index);
+#if defined(STM32F4xx)
+uint32_t _getDMAChannel(int index);
+#else
 DMA_Channel_TypeDef *_getDMAChannel(int index);
+#endif
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance);
 
 

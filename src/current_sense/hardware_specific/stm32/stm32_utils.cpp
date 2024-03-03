@@ -211,7 +211,11 @@ uint32_t _getDMARequest(int index){
   }
 }
 
-DMA_Channel_TypeDef *_getDMAChannel(int index){
+#if defined(STM32F4xx)
+uint32_t _getDMAChannel(int index){
+#else
+DMA_Chasnnel_TypeDef *_getDMAChannel(int index){
+#endif
   switch(index){
     #if defined(STM32F4xx)
     case 0:   
@@ -231,6 +235,10 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
     #ifdef DMA_CHANNEL_4
     case 4:
       return DMA_CHANNEL_4;
+    #endif
+    #ifdef DMA_CHANNEL_5
+    case 5:
+      return DMA_CHANNEL_5;
     #endif
     #endif
     #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
