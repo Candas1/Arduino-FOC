@@ -129,7 +129,7 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   
   DMA_HandleTypeDef* hdma_adc = _get_DMA_handle(hadc->Instance);
   
-  #if defined(STM32G4xx)
+  #if defined(STM32G4xx) || defined(STM32L4xx)
   hdma_adc->Instance = _getDMAChannel(adc_index);
   hdma_adc->Init.Request = _getDMARequest(adc_index);
   #endif
@@ -137,6 +137,10 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   hdma_adc->Instance = _getDMAStream(adc_index);
   hdma_adc->Init.Channel = _getDMAChannel(adc_index);
   #endif
+  #if defined(STM32F1xx)
+  hdma_adc->Instance = _getDMAChannel(adc_index);
+  #endif
+
   hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
   hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
   hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
@@ -245,7 +249,13 @@ int _init_ADC(Stm32ADCSample sample)
   #ifdef ADC_RESOLUTION_12B
   sample.handle->Init.Resolution = ADC_RESOLUTION_12B;
   #endif
+
+  #if defined(STM32F1xx)
+  sample.handle->Init.ScanConvMode = ADC_SCAN_ENABLE; 
+  #else
   sample.handle->Init.ScanConvMode = ENABLE;
+  #endif
+
   sample.handle->Init.ContinuousConvMode = DISABLE;
   
   #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
@@ -257,8 +267,8 @@ int _init_ADC(Stm32ADCSample sample)
   #endif
 
   sample.handle->Init.DiscontinuousConvMode = DISABLE;
-  #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
   sample.handle->Init.ExternalTrigConv = adc_reg_trigger[sample.adc_index]; // for now
+  #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
   if (sample.handle->Init.ExternalTrigConv == ADC_SOFTWARE_START){
     sample.handle->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   }else{

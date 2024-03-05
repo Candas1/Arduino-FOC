@@ -362,7 +362,7 @@ uint32_t _getRegADCRank(int index)
       return ADC_REGULAR_RANK_16;
     #endif
     default:
-      return index + 1;
+      return index + 1; // Works for F4
   }
 }
 
