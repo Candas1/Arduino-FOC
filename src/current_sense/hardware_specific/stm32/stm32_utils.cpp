@@ -225,7 +225,13 @@ int _adcToIndex(ADC_HandleTypeDef *AdcHandle){
 
 uint32_t _getDMARequest(int index){
   switch(index){
-    #if defined(STM32G4xx) || defined(STM32L4xx)
+    #if defined(STM32L4xx)
+    case 0:
+    case 1:
+    case 2:
+      return DMA_REQUEST_0;
+    #endif
+    #if defined(STM32G4xx)
     #ifdef DMA_REQUEST_ADC1
     case 0:
       return DMA_REQUEST_ADC1;

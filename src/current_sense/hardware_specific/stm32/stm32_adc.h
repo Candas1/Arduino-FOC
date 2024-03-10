@@ -57,7 +57,7 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type);
 int _init_ADCs();
 int _init_ADC(Stm32ADCSample sample);
 int _init_DMA(ADC_HandleTypeDef *hadc);
-#ifdef OPAMP
+#ifdef ARDUINO_B_G431B_ESC1
 int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
 int _init_OPAMPs(void);
 #endif

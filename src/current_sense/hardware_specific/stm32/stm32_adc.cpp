@@ -26,7 +26,7 @@ ADC_HandleTypeDef hadc5;
 DMA_HandleTypeDef hdma_adc5;
 #endif
 
-#ifdef OPAMP
+#ifdef ARDUINO_B_G431B_ESC1
 OPAMP_HandleTypeDef hopamp1;
 OPAMP_HandleTypeDef hopamp2;
 OPAMP_HandleTypeDef hopamp3;
@@ -81,7 +81,7 @@ DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
   else return nullptr;
 }
 
-#ifdef OPAMP
+#ifdef ARDUINO_B_G431B_ESC1
 int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def){
   // could this be replaced with LL_OPAMP calls??
   hopamp->Instance = OPAMPx_Def;
@@ -621,21 +621,21 @@ extern "C" {
   #ifdef ADC3
   void ADC3_IRQHandler(void)
   {
-      HAL_ADC_IRQHandler(&hadc);
+      HAL_ADC_IRQHandler(&hadc3);
   }
   #endif
 
   #ifdef ADC4
   void ADC4_IRQHandler(void)
   {
-      HAL_ADC_IRQHandler(&hadc);
+      HAL_ADC_IRQHandler(&hadc4);
   }
   #endif
 
   #ifdef ADC5
   void ADC5_IRQHandler(void)
   {
-      HAL_ADC_IRQHandler(&hadc);
+      HAL_ADC_IRQHandler(&hadc5);
   }
   #endif
   #endif
