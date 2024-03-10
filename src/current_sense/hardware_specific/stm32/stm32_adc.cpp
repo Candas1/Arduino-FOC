@@ -282,8 +282,12 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   __HAL_RCC_DMAMUX1_CLK_ENABLE();
   #endif 
 
+  #ifdef __HAL_RCC_DMA1_CLK_ENABLE
   __HAL_RCC_DMA1_CLK_ENABLE();
+  #endif
+  #ifdef __HAL_RCC_DMA2_CLK_ENABLE
   __HAL_RCC_DMA2_CLK_ENABLE();
+  #endif
   
   int adc_index = _adcToIndex(hadc->Instance);
 
