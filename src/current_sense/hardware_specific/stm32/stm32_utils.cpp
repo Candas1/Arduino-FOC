@@ -225,7 +225,7 @@ int _adcToIndex(ADC_HandleTypeDef *AdcHandle){
 
 uint32_t _getDMARequest(int index){
   switch(index){
-    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
+    #if defined(STM32G4xx) || defined(STM32L4xx)
     #ifdef DMA_REQUEST_ADC1
     case 0:
       return DMA_REQUEST_ADC1;
@@ -282,8 +282,21 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
     case 2:
       return DMA_CHANNEL_2;
     #endif
+    
+    #if defined(STM32F1xx)
+    #ifdef DMA1_Channel1
+    case 0:
+      return DMA1_Channel1;
+    #endif
+    case 1:
+      return 0; // Not available for ADC2
+    #ifdef DMA2_Channel5
+    case 2:
+      return DMA2_Channel5;
+    #endif
+    #endif
 
-    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
+    #if defined(STM32G4xx) || defined(STM32L4xx)
     case 0:
       return DMA1_Channel1;
     #ifdef DMA1_Channel2

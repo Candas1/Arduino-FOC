@@ -26,7 +26,7 @@ ADC_HandleTypeDef hadc5;
 DMA_HandleTypeDef hdma_adc5;
 #endif
 
-#ifdef ARDUINO_B_G431B_ESC1
+#ifdef OPAMP
 OPAMP_HandleTypeDef hopamp1;
 OPAMP_HandleTypeDef hopamp2;
 OPAMP_HandleTypeDef hopamp3;
@@ -44,8 +44,8 @@ int sample_count = 0;
 ADC_HandleTypeDef* adc_handles[ADC_COUNT] = {NP};
 int adc_inj_channel_count[ADC_COUNT] = {0};
 int adc_reg_channel_count[ADC_COUNT] = {0};
-int adc_inj_trigger[ADC_COUNT] = {ADC_SOFTWARE_START};
-int adc_reg_trigger[ADC_COUNT] = {ADC_SOFTWARE_START};
+int adc_inj_trigger[ADC_COUNT] = {0};
+int adc_reg_trigger[ADC_COUNT] = {0};
 
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance){
   if (Instance == ADC1) return &hadc1;
@@ -81,7 +81,7 @@ DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
   else return nullptr;
 }
 
-#ifdef ARDUINO_B_G431B_ESC1
+#ifdef OPAMP
 int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def){
   // could this be replaced with LL_OPAMP calls??
   hopamp->Instance = OPAMPx_Def;
@@ -95,69 +95,32 @@ int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def){
   hopamp->Init.UserTrimming = OPAMP_TRIMMING_FACTORY;
   if (HAL_OPAMP_Init(hopamp) != HAL_OK)
   {
-    SIMPLEFOC_DEBUG("HAL_OPAMP_Init failed!");
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP init failed!");
     return -1;
   }
-  HAL_OPAMP_Start(hopamp);
 
-  return 0;
-}
-#endif
-
-int _init_OPAMPs(void){
-#ifdef ARDUINO_B_G431B_ESC1
-  // Initialize Opamps
-  if (_init_OPAMP(&hopamp1,OPAMP1) == -1) return -1;
-	if (_init_OPAMP(&hopamp2,OPAMP2) == -1) return -1;
-	if (_init_OPAMP(&hopamp3,OPAMP3) == -1) return -1;
-#endif
-  return 0;
-}
-
-int _init_DMA(ADC_HandleTypeDef *hadc){
-  #if defined(__HAL_RCC_DMAMUX1_CLK_ENABLE)
-  __HAL_RCC_DMAMUX1_CLK_ENABLE();
-  #endif 
-
-  #if defined(STM32F4xx) 
-  __HAL_RCC_DMA2_CLK_ENABLE();
-  #else
-  __HAL_RCC_DMA1_CLK_ENABLE();
-  #endif
-  
-  int adc_index = _adcToIndex(hadc->Instance);
-  
-  DMA_HandleTypeDef* hdma_adc = _get_DMA_handle(hadc->Instance);
-  
-  #if defined(STM32G4xx) || defined(STM32L4xx)
-  hdma_adc->Instance = _getDMAChannel(adc_index);
-  hdma_adc->Init.Request = _getDMARequest(adc_index);
-  #endif
-  #if defined(STM32F4xx)
-  hdma_adc->Instance = _getDMAStream(adc_index);
-  hdma_adc->Init.Channel = _getDMAChannel(adc_index);
-  #endif
-  #if defined(STM32F1xx)
-  hdma_adc->Instance = _getDMAChannel(adc_index);
-  #endif
-
-  hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
-  hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
-  hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
-  hdma_adc->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-  hdma_adc->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-  hdma_adc->Init.Mode = DMA_CIRCULAR;
-  hdma_adc->Init.Priority = DMA_PRIORITY_LOW;
-
-  HAL_DMA_DeInit(hdma_adc);
-  if (HAL_DMA_Init(hdma_adc) != HAL_OK)
+  if (HAL_OPAMP_SelfCalibrate(hopamp) != HAL_OK)
   {
-    SIMPLEFOC_DEBUG("HAL_DMA_Init failed!");
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP calibrate failed!");
     return -1;
   }
-  __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
+
+  if (HAL_OPAMP_Start(hopamp) != HAL_OK)
+  {
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP start failed!");
+    return -1;
+  }
 
   return 0;
+}
+#endif
+
+int _add_inj_ADC_sample(uint32_t pin,int32_t trigger){
+  return _add_ADC_sample(pin,trigger,0);
+}
+
+int _add_reg_ADC_sample(uint32_t pin){
+  return _add_ADC_sample(pin,ADC_SOFTWARE_START,1);
 }
 
 int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
@@ -179,7 +142,7 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
   if (type == 0){
     if (adc_inj_channel_count[adc_index] == MAX_INJ_ADC_CHANNELS){
       #ifdef SIMPLEFOC_STM32_DEBUG
-      SIMPLEFOC_DEBUG("STM32-CS: max inj channel reached: ", (int) sample.adc_index+1);
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: max inj channel reached: ", (int) sample.adc_index+1);
       #endif  
     }
     adc_inj_trigger[adc_index] = trigger;
@@ -189,7 +152,7 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
   }else{
     if (adc_reg_channel_count[adc_index] == MAX_REG_ADC_CHANNELS){
       #ifdef SIMPLEFOC_STM32_DEBUG
-      SIMPLEFOC_DEBUG("STM32-CS: max reg channel reached: ", (int) sample.adc_index+1);
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: max reg channel reached: ", (int) sample.adc_index+1);
       #endif  
     }
     adc_reg_trigger[adc_index] = trigger;
@@ -211,13 +174,11 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
   samples[sample_count] = sample;
   sample_count++;  
 
-  return sample_count - 1;
+  return sample_count - 1; // Return index of the sample
 }
 
 int _init_ADCs(){
   int status = 0;
-
-  if (_init_OPAMPs() == -1) return -1;
 
   for (int i=0;i<sample_count;i++){
     if (_init_ADC(samples[i]) == -1) return -1;
@@ -256,7 +217,7 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.ScanConvMode = ENABLE;
   #endif
 
-  sample.handle->Init.ContinuousConvMode = DISABLE;
+  sample.handle->Init.ContinuousConvMode = ENABLE;
   
   #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
       !defined(STM32F4xx) && !defined(STM32F7xx) && !defined(STM32G4xx) && \
@@ -267,7 +228,7 @@ int _init_ADC(Stm32ADCSample sample)
   #endif
 
   sample.handle->Init.DiscontinuousConvMode = DISABLE;
-  sample.handle->Init.ExternalTrigConv = adc_reg_trigger[sample.adc_index]; // for now
+  sample.handle->Init.ExternalTrigConv = adc_reg_trigger[sample.adc_index];
   #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
   if (sample.handle->Init.ExternalTrigConv == ADC_SOFTWARE_START){
     sample.handle->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -292,7 +253,6 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.Overrun = ADC_OVR_DATA_PRESERVED;
   #endif
 
-
   // Init DMA only if there are regular channels to be sampled on this ADC
   if (adc_reg_channel_count[sample.adc_index] > 0){
     if (_init_DMA(sample.handle) == -1) return -1;
@@ -308,11 +268,60 @@ int _init_ADC(Stm32ADCSample sample)
   return 0;
 }
 
+int _init_DMA(ADC_HandleTypeDef *hadc){
+  #if defined(__HAL_RCC_DMAMUX1_CLK_ENABLE)
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  #endif 
+
+  __HAL_RCC_DMA1_CLK_ENABLE();
+  __HAL_RCC_DMA2_CLK_ENABLE();
+  
+  int adc_index = _adcToIndex(hadc->Instance);
+
+  #ifdef STM32F1xx
+    if (hadc->Instance == ADC2){
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: DMA can't work with ADC2");
+      return 0;
+    }
+  #endif
+  
+  DMA_HandleTypeDef* hdma_adc = _get_DMA_handle(hadc->Instance);
+  
+  #if defined(STM32G4xx) || defined(STM32L4xx)
+  hdma_adc->Instance = _getDMAChannel(adc_index);
+  hdma_adc->Init.Request = _getDMARequest(adc_index);
+  #endif
+  #if defined(STM32F4xx)
+  hdma_adc->Instance = _getDMAStream(adc_index);
+  hdma_adc->Init.Channel = _getDMAChannel(adc_index);
+  #endif
+  #if defined(STM32F1xx)
+  hdma_adc->Instance = _getDMAChannel(adc_index);
+  #endif
+
+  hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
+  hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
+  hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
+  hdma_adc->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+  hdma_adc->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+  hdma_adc->Init.Mode = DMA_CIRCULAR;
+  hdma_adc->Init.Priority = DMA_PRIORITY_LOW;
+
+  HAL_DMA_DeInit(hdma_adc);
+  if (HAL_DMA_Init(hdma_adc) != HAL_OK)
+  {
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: DMA Init failed!",_adcToIndex(hadc)+1);
+    return -1;
+  }
+  __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
+
+  return 0;
+}
+
 int _add_inj_ADC_channel_config(Stm32ADCSample sample)
 {
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
-  sConfigInjected.ExternalTrigInjecConv = adc_inj_trigger[sample.adc_index];
   #if defined(STM32F4xx) 
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
   #endif
@@ -320,8 +329,6 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   #if defined(STM32G4xx) || defined(STM32L4xx)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   #endif
-  
-  sConfigInjected.InjectedSamplingTime = sample.SamplingTime;
   
   sConfigInjected.AutoInjectedConv = DISABLE;
   #if defined(ADC_DIFFERENTIAL_ENDED) && !defined(ADC1_V2_5)
@@ -336,12 +343,14 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
 
   int adc_index = _adcToIndex(sample.handle);
 
+  sConfigInjected.ExternalTrigInjecConv   = adc_inj_trigger[sample.adc_index];
+  sConfigInjected.InjectedSamplingTime    = sample.SamplingTime;
   sConfigInjected.InjectedNbrOfConversion = adc_inj_channel_count[adc_index];
-  sConfigInjected.InjectedRank = sample.rank;
-  sConfigInjected.InjectedChannel = sample.channel;
+  sConfigInjected.InjectedRank            = sample.rank;
+  sConfigInjected.InjectedChannel         = sample.channel;
   if (HAL_ADCEx_InjectedConfigChannel(sample.handle, &sConfigInjected) != HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init injected channel: ", (int) sConfigInjected.InjectedChannel);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init inj channel: ", (int) sConfigInjected.InjectedChannel);
     #endif
     return -1;
   }
@@ -353,9 +362,9 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
 int _add_reg_ADC_channel_config(Stm32ADCSample sample)
 {
   ADC_ChannelConfTypeDef  AdcChannelConf = {};
-  AdcChannelConf.Channel      = sample.channel;                          /* Specifies the channel to configure into ADC */
+  AdcChannelConf.Channel      = sample.channel;            /* Specifies the channel to configure into ADC */
   AdcChannelConf.Rank         = sample.rank;               /* Specifies the rank in the regular group sequencer */
-  AdcChannelConf.SamplingTime = sample.SamplingTime;                     /* Sampling time value to be set for the selected channel */
+  AdcChannelConf.SamplingTime = sample.SamplingTime;       /* Sampling time value to be set for the selected channel */
 #if defined(ADC_DIFFERENTIAL_ENDED) && !defined(ADC1_V2_5)
   AdcChannelConf.SingleDiff   = ADC_SINGLE_ENDED;                 /* Single-ended input channel */
   AdcChannelConf.OffsetNumber = ADC_OFFSET_NONE;                  /* No offset subtraction */
@@ -374,7 +383,7 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample)
   /*##-2- Configure ADC regular channel ######################################*/
   if (HAL_ADC_ConfigChannel(sample.handle, &AdcChannelConf) != HAL_OK) {
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init regular channel: ", (int) AdcChannelConf.Channel);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot init reg channel: ", (int) AdcChannelConf.Channel);
     #endif
     return -1;
   }
@@ -383,10 +392,9 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample)
   
 }
 
-// Calibrates the ADC if initialized and not already started
+// Calibrates the ADC if initialized and not already enabled
 int _calibrate_ADC(ADC_HandleTypeDef* hadc){
-  if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (_is_enabled_ADC(hadc)) return 0; // ADC already started
+  if (_is_enabled_ADC(hadc)) return 0; // ADC already enabled
 
   // Start the adc calibration
   #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
@@ -401,7 +409,7 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
   {
     /* ADC Calibration Error */
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: can't calibrate ADC :",_adcToIndex(hadc)+1);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't calibrate ADC :",_adcToIndex(hadc)+1);
     #endif
     return -1;
   }
@@ -413,27 +421,19 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
 }
 
 
-// Starts the ADC if initialized and not already started
+// Starts the injected ADC
 int _start_ADC(ADC_HandleTypeDef* hadc){
-
-  if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (_is_enabled_ADC(hadc)) return 0; // ADC already started
-  
   if (HAL_ADCEx_InjectedStart(hadc) !=  HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: can't start inj ADC :",_adcToIndex(hadc)+1);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start inj ADC :",_adcToIndex(hadc)+1);
     #endif
     return -1;
   }
   return 0;
 }
 
-// Starts the ADC with interrupt if initialized and not already started
-int _start_ADC_IT(ADC_HandleTypeDef* hadc){
-
-  if (hadc->Instance == 0) return 0; // ADC not initialized
-  if (_is_enabled_ADC(hadc)) return 0; // ADC already started
-      
+// Starts the regular ADC with interrupt
+int _start_ADC_IT(ADC_HandleTypeDef* hadc){      
   // enable interrupt
   #if defined(STM32F4xx)
   HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
@@ -441,7 +441,7 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
   #endif
 
   #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
-  if(hadc->Instance == ADC1 || hadc->Instance == ADC2) {
+  if(hadc->Instance == ADC1) {
     HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
   }
@@ -474,13 +474,15 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 
   if (HAL_ADCEx_InjectedStart_IT(hadc) !=  HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: can't start inj ADC with IT:",_adcToIndex(hadc)+1);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start inj ADC with IT:",_adcToIndex(hadc)+1);
     #endif
     return -1;
   }
   return 0;
 }
 
+
+// Triggers the software start of regular ADC
 void _start_reg_conversion_ADCs(void){
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
@@ -503,14 +505,12 @@ void _start_reg_conversion_ADCs(void){
 int _start_ADCs(void){
   int status = 0;
 
-  _init_OPAMPs();
-
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
      
       if(_calibrate_ADC(adc_handles[i]) == -1) return -1;
 
-      // For now only ADC1 is trigering the interrupt
+      // For now only ADC1 is started with interrupt
       if ((adc_handles[i])->Instance == ADC1){
         if(_start_ADC_IT(adc_handles[i]) == -1) return -1;
       }else{
@@ -526,16 +526,19 @@ int _start_ADCs(void){
 }
 
 int _start_DMA(ADC_HandleTypeDef* hadc){
+
+  if (hadc->DMA_Handle == 0) return 0; // Skip DMA start if no DMA handle
   int adc_index = _adcToIndex(hadc->Instance);
 
   // Start DMA only if there are regular channels to be sampled on this ADC
   if (adc_reg_channel_count[adc_index] == 0) return 0;
-      
-  uint32_t* address = (uint32_t*)(adc_reg_val) + (MAX_REG_ADC_CHANNELS/2*adc_index); // Calculate the address for the right row in the array
+
+  // Calculate the address for the right row in the array    
+  uint32_t* address = (uint32_t*)(adc_reg_val) + (MAX_REG_ADC_CHANNELS/2*adc_index); 
   if (HAL_ADC_Start_DMA(hadc,  address , adc_reg_channel_count[adc_index]) != HAL_OK) 
   {
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("DMA read init failed");
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: DMA start failed",_adcToIndex(hadc)+1);
     #endif
     return -1;
   }
@@ -545,9 +548,6 @@ int _start_DMA(ADC_HandleTypeDef* hadc){
 // Writes Injected ADC values to the adc buffer
 void _read_ADC(ADC_HandleTypeDef* hadc){
 
-  if (hadc->Instance == 0) return; // skip if ADC not initialized
-  if (!_is_enabled_ADC(hadc)) return; // skip if ADC not started
-  
   int adc_index = _adcToIndex(hadc);
   int channel_count = adc_inj_channel_count[_adcToIndex(hadc)];
   for(int i=0;i<channel_count;i++){
@@ -589,6 +589,7 @@ uint32_t _read_ADC_pin(int pin){
     if (samples[i].pin == pin) return _read_ADC_sample(i);
   }
 
+  // the pin wasn't found.
   return 0;
 }
 

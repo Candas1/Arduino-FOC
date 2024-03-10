@@ -95,9 +95,6 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
     cs_params->inj_trigger = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
     if(cs_params->inj_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
 
-    //cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
-    //if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
-
     // this will be the timer with which the ADC will sync
     cs_params->timer_handle = driver_params->timers[tim_num-1];
     // done
@@ -113,18 +110,24 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->inj_trigger,0);
+      cs_params->samples[i] = _add_inj_ADC_sample(cs_params->pins[i],cs_params->inj_trigger);
       if (cs_params->samples[i] == -1) return -1;
     }    
   }
-  
+
   #ifdef ARDUINO_B_G431B_ESC1
-  if (_add_ADC_sample(A_BEMF1,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(A_BEMF2,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(A_BEMF3,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(A_POTENTIOMETER,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(A_TEMPERATURE,cs_params->reg_trigger,1) == -1) return -1;
-  if (_add_ADC_sample(A_VBUS,cs_params->reg_trigger,1) == -1) return -1;
+  // Add other channels to sample on this specific board
+  if (_add_reg_ADC_sample(A_BEMF1) == -1) return -1;
+  if (_add_reg_ADC_sample(A_BEMF2) == -1) return -1;
+  if (_add_reg_ADC_sample(A_BEMF3) == -1) return -1;
+  if (_add_reg_ADC_sample(A_POTENTIOMETER) == -1) return -1;
+  if (_add_reg_ADC_sample(A_TEMPERATURE) == -1) return -1;
+  if (_add_reg_ADC_sample(A_VBUS) == -1) return -1;
+ 
+  // Initialize Opamps
+  if (_init_OPAMP(&hopamp1,OPAMP1) == -1) return -1;
+	if (_init_OPAMP(&hopamp2,OPAMP2) == -1) return -1;
+	if (_init_OPAMP(&hopamp3,OPAMP3) == -1) return -1;
   #endif
 
   if (_init_ADCs() == -1) return -1; 
@@ -194,7 +197,7 @@ extern "C" {
       return;
     }
     
-    _start_reg_conversion_ADCs();
+    //_start_reg_conversion_ADCs();
 
     _read_ADCs(); // fill the ADC buffer
   }
