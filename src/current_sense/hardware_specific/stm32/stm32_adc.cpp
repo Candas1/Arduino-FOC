@@ -113,6 +113,15 @@ int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def){
 
   return 0;
 }
+
+int _init_OPAMPs(void){
+  // Initialize Opamps
+  if (_init_OPAMP(&hopamp1,OPAMP1) == -1) return -1;
+	if (_init_OPAMP(&hopamp2,OPAMP2) == -1) return -1;
+	if (_init_OPAMP(&hopamp3,OPAMP3) == -1) return -1;
+  return 0;
+}
+
 #endif
 
 int _add_inj_ADC_sample(uint32_t pin,int32_t trigger){

@@ -117,17 +117,15 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 
   #ifdef ARDUINO_B_G431B_ESC1
   // Add other channels to sample on this specific board
-  if (_add_reg_ADC_sample(A_BEMF1) == -1) return -1;
-  if (_add_reg_ADC_sample(A_BEMF2) == -1) return -1;
-  if (_add_reg_ADC_sample(A_BEMF3) == -1) return -1;
+  if (_add_inj_ADC_sample(A_BEMF1,cs_params->inj_trigger) == -1) return -1;
+  if (_add_inj_ADC_sample(A_BEMF2,cs_params->inj_trigger) == -1) return -1;
+  if (_add_inj_ADC_sample(A_BEMF3,cs_params->inj_trigger) == -1) return -1;
   if (_add_reg_ADC_sample(A_POTENTIOMETER) == -1) return -1;
   if (_add_reg_ADC_sample(A_TEMPERATURE) == -1) return -1;
   if (_add_reg_ADC_sample(A_VBUS) == -1) return -1;
  
   // Initialize Opamps
-  if (_init_OPAMP(&hopamp1,OPAMP1) == -1) return -1;
-	if (_init_OPAMP(&hopamp2,OPAMP2) == -1) return -1;
-	if (_init_OPAMP(&hopamp3,OPAMP3) == -1) return -1;
+  if (_init_OPAMPs() == -1) return -1;
   #endif
 
   if (_init_ADCs() == -1) return -1; 

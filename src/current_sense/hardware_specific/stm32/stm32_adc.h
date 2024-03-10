@@ -51,7 +51,6 @@ typedef struct Stm32ADCSample {
   uint32_t SamplingTime = NP;
 } Stm32ADCSample;
 
-
 int _add_inj_ADC_sample(uint32_t pin,int32_t trigger);
 int _add_reg_ADC_sample(uint32_t pin);
 int _add_ADC_sample(uint32_t pin,int32_t trigger,int type);
@@ -60,6 +59,7 @@ int _init_ADC(Stm32ADCSample sample);
 int _init_DMA(ADC_HandleTypeDef *hadc);
 #ifdef OPAMP
 int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
+int _init_OPAMPs(void);
 #endif
 int _add_inj_ADC_channel_config(Stm32ADCSample sample);
 int _add_reg_ADC_channel_config(Stm32ADCSample sample);
