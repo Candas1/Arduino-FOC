@@ -35,7 +35,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
     .inj_trigger = NP,
   };
 
-  #if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx) 
+  #if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32F7xx) || defined(STM32G4xx) || defined(STM32L4xx) 
   for(int i=0;i<3;i++){
     if _isset(params->pins[i]){
       params->samples[i] = _add_reg_ADC_sample(params->pins[i]);
@@ -49,7 +49,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
   return params;
 }
 
-#if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx) 
+#if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32F7xx) || defined(STM32G4xx) || defined(STM32L4xx) 
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageInline(const int pinA, const void* cs_params){
   uint32_t raw_adc = _read_ADC_pin(pinA);
@@ -204,8 +204,6 @@ extern "C" {
       return;
     }
     
-    //_start_reg_conversion_ADCs();
-
     _read_ADCs(); // fill the ADC buffer
   }
 }

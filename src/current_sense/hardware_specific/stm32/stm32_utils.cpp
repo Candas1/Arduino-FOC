@@ -22,7 +22,7 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
 #endif
 #endif
 
-#if defined(STM32F4xx)
+#if defined(STM32F4xx) || defined(STM32F7xx)
   if(timer->getHandle()->Instance == TIM1)  
     return ADC_EXTERNALTRIGINJECCONV_T1_TRGO;
 #ifdef TIM2 // if defined timer 2
@@ -105,100 +105,6 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
 #endif
 #endif
   
-  return _TRGO_NOT_AVAILABLE;
-}
-
-// timer to regular TRGO
-// https://github.com/stm32duino/Arduino_Core_STM32/blob/6588dee03382e73ed42c4a5e473900ab3b79d6e4/system/Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_adc.h#L519
-uint32_t _timerToRegularTRGO(HardwareTimer* timer){
-#if defined(STM32F1xx)
-  if(timer->getHandle()->Instance == TIM3) 
-    return ADC_EXTERNALTRIGCONV_T3_TRGO;
-#ifdef TIM8 // if defined timer 8
-  else if(timer->getHandle()->Instance == TIM8) 
-    return ADC_EXTERNALTRIGCONV_T8_TRGO;
-#endif
-#endif
-
-#if defined(STM32F4xx)
-  if(timer->getHandle()->Instance == TIM2)  
-    return ADC_EXTERNALTRIGCONV_T2_TRGO;
-#ifdef TIM3 // if defined timer 3
-  else if(timer->getHandle()->Instance == TIM3) 
-    return ADC_EXTERNALTRIGCONV_T3_TRGO;
-#endif
-#ifdef TIM8 // if defined timer 8
-  else if(timer->getHandle()->Instance == TIM8) 
-    return ADC_EXTERNALTRIGCONV_T8_TRGO;
-#endif
-#endif
-
-#if defined(STM32G4xx)
-  if(timer->getHandle()->Instance == TIM1)  
-    return ADC_EXTERNALTRIG_T1_TRGO;
-#ifdef TIM2 // if defined timer 2
-  else if(timer->getHandle()->Instance == TIM2) 
-    return ADC_EXTERNALTRIG_T2_TRGO;
-#endif
-#ifdef TIM3 // if defined timer 3
-  else if(timer->getHandle()->Instance == TIM3) 
-    return ADC_EXTERNALTRIG_T3_TRGO;
-#endif
-#ifdef TIM4 // if defined timer 4
-  else if(timer->getHandle()->Instance == TIM4) 
-    return ADC_EXTERNALTRIG_T4_TRGO;
-#endif
-#ifdef TIM6 // if defined timer 6
-  else if(timer->getHandle()->Instance == TIM6) 
-    return ADC_EXTERNALTRIG_T6_TRGO;
-#endif
-#ifdef TIM7 // if defined timer 7
-  else if(timer->getHandle()->Instance == TIM7) 
-    return ADC_EXTERNALTRIG_T7_TRGO;
-#endif
-#ifdef TIM8 // if defined timer 8
-  else if(timer->getHandle()->Instance == TIM8) 
-    return ADC_EXTERNALTRIG_T7_TRGO;
-#endif
-#ifdef TIM15 // if defined timer 15
-  else if(timer->getHandle()->Instance == TIM15) 
-    return ADC_EXTERNALTRIG_T15_TRGO;
-#endif
-#ifdef TIM20 // if defined timer 15
-  else if(timer->getHandle()->Instance == TIM20) 
-    return ADC_EXTERNALTRIG_T20_TRGO;
-#endif
-#endif
-
-#if defined(STM32L4xx)
-  if(timer->getHandle()->Instance == TIM1)  
-    return ADC_EXTERNALTRIG_T1_TRGO;
-#ifdef TIM2 // if defined timer 2
-  else if(timer->getHandle()->Instance == TIM2) 
-    return ADC_EXTERNALTRIG_T2_TRGO;
-#endif
-#ifdef TIM3 // if defined timer 3
-  else if(timer->getHandle()->Instance == TIM3) 
-    return ADC_EXTERNALTRIG_T3_TRGO;
-#endif
-#ifdef TIM4 // if defined timer 4
-  else if(timer->getHandle()->Instance == TIM4) 
-    return ADC_EXTERNALTRIG_T4_TRGO;
-#endif
-#ifdef TIM6 // if defined timer 6
-  else if(timer->getHandle()->Instance == TIM6) 
-    return ADC_EXTERNALTRIG_T6_TRGO;
-#endif
-#ifdef TIM8 // if defined timer 8
-  else if(timer->getHandle()->Instance == TIM8) 
-    return ADC_EXTERNALTRIG_T8_TRGO;
-#endif
-#ifdef TIM15 // if defined timer 15
-  else if(timer->getHandle()->Instance == TIM15) 
-    return ADC_EXTERNALTRIG_T15_TRGO;
-#endif
-#endif
-
   return _TRGO_NOT_AVAILABLE;
 }
 
@@ -513,15 +419,6 @@ uint32_t _getADCChannel(PinName pin)
       break;
   }
   return channel;
-}
-
-uint32_t _is_enabled_ADC(ADC_HandleTypeDef* hadc){
-  #if defined(STM32F1xx)
-  return ADC_IS_ENABLE(hadc);
-  #endif
-  #if defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx)
-  return LL_ADC_IsEnabled(hadc->Instance);
-  #endif 
 }
 
 #endif

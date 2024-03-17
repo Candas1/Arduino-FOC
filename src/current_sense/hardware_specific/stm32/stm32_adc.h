@@ -131,7 +131,6 @@ int _start_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC_IT(ADC_HandleTypeDef* hadc);
 int _start_ADCs(int use_adc_interrupt = 0);
 int _start_DMA(ADC_HandleTypeDef* hadc);
-void _start_reg_conversion_ADCs(void);
 void _read_ADC(ADC_HandleTypeDef* hadc);
 void _read_ADCs(void);
 uint32_t _read_ADC_buf(int adc_index,int index);

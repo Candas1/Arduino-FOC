@@ -334,7 +334,7 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   hdma_adc->Instance = _getDMAChannel(adc_index);
   hdma_adc->Init.Request = _getDMARequest(adc_index);
   #endif
-  #if defined(STM32F4xx)
+  #if defined(STM32F4xx) || defined(STM32F7xx)
   hdma_adc->Instance = _getDMAStream(adc_index);
   hdma_adc->Init.Channel = _getDMAChannel(adc_index);
   #endif
@@ -438,8 +438,6 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample)
 
 // Calibrates the ADC if initialized and not already enabled
 int _calibrate_ADC(ADC_HandleTypeDef* hadc){
-  if (_is_enabled_ADC(hadc)) return 0; // ADC already enabled
-
   // Start the adc calibration
   #if defined(ADC_CR_ADCAL) || defined(ADC_CR2_RSTCAL)
   /*##-2.1- Calibrate ADC then Start the conversion process ####################*/
@@ -485,9 +483,9 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
   #ifdef SIMPLEFOC_STM32_DEBUG
   SIMPLEFOC_DEBUG("STM32-CS: start inj ADC with IT:",_adcToIndex(hadc)+1);
   #endif
-    
+
   // enable interrupt
-  #if defined(STM32F4xx)
+  #if defined(STM32F4xx) || defined(STM32F7xx)
   HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(ADC_IRQn);
   #endif
@@ -531,26 +529,6 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
     return -1;
   }
   return 0;
-}
-
-
-// Triggers the software start of regular ADC
-void _start_reg_conversion_ADCs(void){
-  for (int i = 0; i < ADC_COUNT; i++){
-    if (adc_handles[i] != NP){
-      if (adc_reg_channel_count[i] > 0 && adc_reg_trigger[i] == ADC_SOFTWARE_START){
-        #if defined(STM32F1xx)
-        SET_BIT(adc_handles[i]->Instance->CR2, (ADC_CR2_SWSTART | ADC_CR2_EXTTRIG));
-        #endif
-        #if defined(STM32F4xx)
-        LL_ADC_REG_StartConversionSWStart(adc_handles[i]->Instance);
-        #endif
-        #if defined(STM32G4xx) || defined(STM32L4xx) 
-        LL_ADC_REG_StartConversion(adc_handles[i]->Instance);
-        #endif
-      }
-    }
-  }
 }
 
 // Calibrated and starts all the ADCs that have been initialized
@@ -658,7 +636,7 @@ uint32_t _read_ADC_pin(int pin){
 }
 
 extern "C" {
-  #if defined(STM32F4xx)
+  #if defined(STM32F4xx) || defined(STM32F7xx)
   void ADC_IRQHandler(void)
   {
       HAL_ADC_IRQHandler(interrupt_adc);
