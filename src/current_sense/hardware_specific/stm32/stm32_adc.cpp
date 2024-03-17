@@ -365,12 +365,13 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
 {
   ADC_InjectionConfTypeDef sConfigInjected = {};
 
-  #if defined(STM32F4xx) 
+  #if !defined(STM32F1xx)
+  #if defined(ADC_EXTERNALTRIGINJECCONVEDGE_RISING) 
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONVEDGE_RISING;
   #endif
-  
-  #if defined(STM32G4xx) || defined(STM32L4xx)
+  #if defined(ADC_EXTERNALTRIGINJECCONV_EDGE_RISING)
   sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
+  #endif
   #endif
   
   sConfigInjected.AutoInjectedConv = DISABLE;
