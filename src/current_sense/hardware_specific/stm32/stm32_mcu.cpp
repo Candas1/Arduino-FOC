@@ -33,8 +33,18 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
     .adc_voltage_conv = (_ADC_VOLTAGE)/(_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
-    .reg_trigger = NP,
   };
+
+  #if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32G4xx) || defined(STM32L4xx) 
+  for(int i=0;i<3;i++){
+    if _isset(params->pins[i]){
+      params->samples[i] = _add_reg_ADC_sample(params->pins[i]);
+    }    
+  }
+
+  _init_ADCs();
+  _start_ADCs();
+  #endif
 
   return params;
 }
@@ -59,7 +69,6 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     .adc_voltage_conv = (_ADC_VOLTAGE) / (_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
-    .reg_trigger = ADC_SOFTWARE_START,
   };
   _adc_gpio_init(cs_params, pinA,pinB,pinC);
 
@@ -167,7 +176,7 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
   // set the trigger output event
   LL_TIM_SetTriggerOutput(cs_params->timer_handle->getHandle()->Instance, LL_TIM_TRGO_UPDATE);
  
-  _start_ADCs();
+  _start_ADCs(use_adc_interrupt);
 
   // restart all the timers of the driver
   _startTimers(driver_params->timers, 6);

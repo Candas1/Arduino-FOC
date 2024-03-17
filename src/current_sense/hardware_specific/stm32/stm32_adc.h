@@ -39,6 +39,68 @@
 
 #define ADC_COUNT (ADC1_COUNT + ADC2_COUNT + ADC3_COUNT + ADC4_COUNT + ADC5_COUNT)
 
+
+#ifndef ADC_SAMPLINGTIME_INJ
+#if defined(ADC_SAMPLETIME_1CYCLE_5)
+#define ADC_SAMPLINGTIME_INJ ADC_SAMPLETIME_1CYCLE_5;
+#elif defined(ADC_SAMPLETIME_2CYCLES_5)
+#define ADC_SAMPLINGTIME_INJ ADC_SAMPLETIME_2CYCLES_5;
+#elif defined(ADC_SAMPLETIME_3CYCLES)
+#define ADC_SAMPLINGTIME_INJ ADC_SAMPLETIME_3CYCLES;
+#endif
+#endif /* !ADC_SAMPLINGTIME */
+
+#ifndef ADC_SAMPLINGTIME
+#if defined(ADC_SAMPLETIME_8CYCLES_5)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_8CYCLES_5;
+#elif defined(ADC_SAMPLETIME_12CYCLES)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_12CYCLES;
+#elif defined(ADC_SAMPLETIME_12CYCLES_5)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_12CYCLES_5;
+#elif defined(ADC_SAMPLETIME_13CYCLES_5)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_13CYCLES_5;
+#elif defined(ADC_SAMPLETIME_15CYCLES)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_15CYCLES;
+#elif defined(ADC_SAMPLETIME_16CYCLES)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_16CYCLES;
+#elif defined(ADC_SAMPLETIME_19CYCLES_5)
+#define ADC_SAMPLINGTIME        ADC_SAMPLETIME_19CYCLES_5;
+#endif
+#endif /* !ADC_SAMPLINGTIME */
+
+/*
+ * Minimum ADC sampling time is required when reading
+ * internal channels so set it to max possible value.
+ * It can be defined more precisely by defining:
+ * ADC_SAMPLINGTIME_INTERNAL
+ * to the desired ADC sample time.
+ */
+#ifndef ADC_SAMPLINGTIME_INTERNAL
+#if defined(ADC_SAMPLETIME_480CYCLES)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_480CYCLES
+#elif defined(ADC_SAMPLETIME_384CYCLES)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_384CYCLES
+#elif defined(ADC_SAMPLETIME_810CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_810CYCLES_5
+#elif defined(ADC_SAMPLETIME_814CYCLES)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_814CYCLES
+#elif defined(ADC_SAMPLETIME_640CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_640CYCLES_5
+#elif defined(ADC_SAMPLETIME_601CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_601CYCLES_5
+#elif defined(ADC_SAMPLETIME_247CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_247CYCLES_5
+#elif defined(ADC_SAMPLETIME_239CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_239CYCLES_5
+#elif defined(ADC_SAMPLETIME_160CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_160CYCLES_5
+#elif defined(ADC_SAMPLETIME_814CYCLES_5)
+#define ADC_SAMPLINGTIME_INTERNAL ADC_SAMPLETIME_814CYCLES_5
+#else
+#error "ADC sampling time could not be defined for internal channels!"
+#endif
+#endif /* !ADC_SAMPLINGTIME_INTERNAL */
+
 typedef struct Stm32ADCSample {
   ADC_TypeDef* Instance = NP;
   ADC_HandleTypeDef* handle = NP;
@@ -67,7 +129,7 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample);
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC(ADC_HandleTypeDef* hadc);
 int _start_ADC_IT(ADC_HandleTypeDef* hadc);
-int _start_ADCs(void);
+int _start_ADCs(int use_adc_interrupt = 0);
 int _start_DMA(ADC_HandleTypeDef* hadc);
 void _start_reg_conversion_ADCs(void);
 void _read_ADC(ADC_HandleTypeDef* hadc);
