@@ -217,8 +217,6 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
 }
 
 int _init_ADCs(){
-  int status = 0;
-
   for (int i=0;i<sample_count;i++){
     if (_init_ADC(samples[i]) == -1) return -1;
     if (samples[i].type == 0 ){
@@ -533,8 +531,6 @@ int _start_ADC_IT(ADC_HandleTypeDef* hadc){
 
 // Calibrated and starts all the ADCs that have been initialized
 int _start_ADCs(int use_adc_interrupt){
-  int status = 0;
-
   for (int i = 0; i < ADC_COUNT; i++){
     if (adc_handles[i] != NP){
      
