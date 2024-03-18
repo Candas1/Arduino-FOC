@@ -168,6 +168,22 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
   if(timer->getHandle()->Instance == TIM20) return ADC_EXTERNALTRIGINJEC_T20_TRGO;
 #endif
 
+#if defined(ADC_EXTERNALTRIGINJEC_T21_TRGO) && defined(TIM21)
+  if(timer->getHandle()->Instance == TIM21) return ADC_EXTERNALTRIGINJEC_T21_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGINJEC_T22_TRGO) && defined(TIM22)
+  if(timer->getHandle()->Instance == TIM22) return ADC_EXTERNALTRIGINJEC_T22_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGINJEC_T23_TRGO) && defined(TIM23)
+  if(timer->getHandle()->Instance == TIM23) return ADC_EXTERNALTRIGINJEC_T23_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGINJEC_T24_TRGO) && defined(TIM24)
+  if(timer->getHandle()->Instance == TIM24) return ADC_EXTERNALTRIGINJEC_T24_TRGO;
+#endif
+
   // Return not available if no trigger was found, not that following families have no injected ADC : C0 F0 G0 L0 WL
   return _TRGO_NOT_AVAILABLE;
 }
