@@ -8,14 +8,18 @@
 
 #define _TRGO_NOT_AVAILABLE 12345
 
+// Only if injected ADC available
+#ifdef ADC_INJECTED_SOFTWARE_START
 uint32_t _timerToInjectedTRGO(HardwareTimer* timer); // timer to injected TRGO
+uint32_t _getInjADCRank(int index);
+#endif
+
 uint32_t _timerToRegularTRGO(HardwareTimer* timer); // timer to regular TRGO
 
 // function returning index of the ADC instance
 int _adcToIndex(ADC_HandleTypeDef *AdcHandle);
 int _adcToIndex(ADC_TypeDef *AdcHandle);
 uint32_t _getADCChannel(PinName pin);
-uint32_t _getInjADCRank(int index);
 uint32_t _getRegADCRank(int index);
 uint32_t _getDMARequest(int index);
 #if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)

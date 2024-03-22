@@ -33,6 +33,7 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
     .adc_voltage_conv = (_ADC_VOLTAGE)/(_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
+    .reg_trigger = NP,
   };
 
   #if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32F7xx) || defined(STM32G4xx) || defined(STM32L4xx) 
@@ -69,6 +70,7 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     .adc_voltage_conv = (_ADC_VOLTAGE) / (_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
+    .reg_trigger = NP,
   };
   _adc_gpio_init(cs_params, pinA,pinB,pinC);
 
@@ -97,8 +99,9 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 {
   ADC_TypeDef *Instance = {};
   int status;
-  
-  // automating TRGO flag finding - hardware specific
+
+  #ifdef ADC_INJECTED_SOFTWARE_START
+  // automating Injected TRGO flag finding - hardware specific
   uint8_t tim_num = 0;
   while(driver_params->timers[tim_num] != NP && tim_num < 6){
     cs_params->inj_trigger = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
@@ -119,10 +122,37 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
 
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_inj_ADC_sample(cs_params->pins[i],cs_params->inj_trigger);
+      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->inj_trigger,0);
       if (cs_params->samples[i] == -1) return -1;
     }    
   }
+  #else
+  // automating Injected TRGO flag finding - hardware specific
+  uint8_t tim_num = 0;
+  while(driver_params->timers[tim_num] != NP && tim_num < 6){
+    cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
+    if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
+
+    // this will be the timer with which the ADC will sync
+    cs_params->timer_handle = driver_params->timers[tim_num-1];
+    // done
+    break;
+  }
+  if( cs_params->timer_handle == NP ){
+    // not possible to use these timers for low-side current sense
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot sync any timer to regular channels!");
+    #endif
+    return -1;
+  }
+
+  for(int i=0;i<3;i++){
+    if _isset(cs_params->pins[i]){
+      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->reg_trigger,1);
+      if (cs_params->samples[i] == -1) return -1;
+    }    
+  }
+  #endif
 
   #ifdef ARDUINO_B_G431B_ESC1
   // Add other channels to sample on this specific board
@@ -184,7 +214,11 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
 
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
-  if (!use_adc_interrupt) _read_ADCs(); // Fill the adc buffer now in case no interrup is used
+  // Only if injected ADC available
+  #ifdef ADC_INJECTED_SOFTWARE_START
+  if (!use_adc_interrupt) _read_inj_ADCs(); // Fill the adc buffer now in case no interrup is used
+  #endif
+
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
       return _read_ADC_sample(((Stm32CurrentSenseParams*)cs_params)->samples[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
@@ -194,6 +228,8 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
 }
 
 extern "C" {
+  // Only if injected ADC available
+  #ifdef ADC_INJECTED_SOFTWARE_START
   void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *AdcHandle){
     // calculate the instance
     int adc_index = _adcToIndex(AdcHandle);
@@ -204,8 +240,9 @@ extern "C" {
       return;
     }
     
-    _read_ADCs(); // fill the ADC buffer
+    _read_inj_ADCs(); // fill the ADC buffer
   }
+  #endif
 }
 
 

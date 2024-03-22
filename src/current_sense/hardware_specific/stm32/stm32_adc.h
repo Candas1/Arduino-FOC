@@ -113,6 +113,7 @@ typedef struct Stm32ADCSample {
   uint32_t SamplingTime = NP;
 } Stm32ADCSample;
 
+
 int _add_inj_ADC_sample(uint32_t pin,int32_t trigger);
 int _add_reg_ADC_sample(uint32_t pin);
 int _add_ADC_sample(uint32_t pin,int32_t trigger,int type);
@@ -123,20 +124,23 @@ int _init_DMA(ADC_HandleTypeDef *hadc);
 int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
 int _init_OPAMPs(void);
 #endif
-int _add_inj_ADC_channel_config(Stm32ADCSample sample);
 int _add_reg_ADC_channel_config(Stm32ADCSample sample);
-
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
-int _start_ADC(ADC_HandleTypeDef* hadc);
-int _start_ADC_IT(ADC_HandleTypeDef* hadc);
 int _start_ADCs(int use_adc_interrupt = 0);
 int _start_DMA(ADC_HandleTypeDef* hadc);
-void _read_ADC(ADC_HandleTypeDef* hadc);
-void _read_ADCs(void);
 uint32_t _read_ADC_buf(int adc_index,int index);
 uint32_t _read_DMA_buf(int adc_index,int index);
 uint32_t _read_ADC_sample(int index);
 uint32_t _read_ADC_pin(int pin);
+
+#ifdef ADC_INJECTED_SOFTWARE_START
+int _add_inj_ADC_channel_config(Stm32ADCSample sample);
+int _start_inj_ADC(ADC_HandleTypeDef* hadc);
+int _start_inj_ADC_IT(ADC_HandleTypeDef* hadc);
+void _read_inj_ADC(ADC_HandleTypeDef* hadc);
+void _read_inj_ADCs(void);
+#endif
+
 
 #endif
 #endif

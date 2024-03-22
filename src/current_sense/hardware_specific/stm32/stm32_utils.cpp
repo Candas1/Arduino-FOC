@@ -2,6 +2,9 @@
 
 #if defined(_STM32_DEF_)
 
+// Only if injected ADC available
+#ifdef ADC_INJECTED_SOFTWARE_START
+
 // timer to injected TRGO
 uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
 
@@ -186,6 +189,24 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
   // Return not available if no trigger was found, not that following families have no injected ADC : C0 F0 G0 L0 WL
   return _TRGO_NOT_AVAILABLE;
 }
+
+uint32_t _getInjADCRank(int index)
+{
+  switch(index){
+    case 1:
+      return ADC_INJECTED_RANK_1;
+    case 2:
+      return ADC_INJECTED_RANK_2;
+    case 3:
+      return ADC_INJECTED_RANK_3;
+    case 4:
+      return ADC_INJECTED_RANK_4;
+    default:
+      return 0;
+  }
+}
+
+#endif
 
 // timer to regular TRGO
 uint32_t _timerToRegularTRGO(HardwareTimer* timer){
@@ -492,22 +513,6 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
       return DMA1_Channel5;
     #endif
     #endif
-    default:
-      return 0;
-  }
-}
-
-uint32_t _getInjADCRank(int index)
-{
-  switch(index){
-    case 1:
-      return ADC_INJECTED_RANK_1;
-    case 2:
-      return ADC_INJECTED_RANK_2;
-    case 3:
-      return ADC_INJECTED_RANK_3;
-    case 4:
-      return ADC_INJECTED_RANK_4;
     default:
       return 0;
   }
