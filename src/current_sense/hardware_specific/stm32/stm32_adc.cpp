@@ -544,7 +544,9 @@ int _start_ADCs(int use_adc_interrupt){
       if(_calibrate_ADC(adc_handles[i]) == -1) return -1;
 
       int  adc_index = _adcToIndex(adc_handles[i]);
-
+      
+      // Only if Injected ADC is available
+      #ifdef ADC_INJECTED_SOFTWARE_START
       if (adc_inj_channel_count[adc_index] > 0){
         // There are injected adc channels to be sampled
         if (use_adc_interrupt && // if interrupt is required
@@ -558,6 +560,7 @@ int _start_ADCs(int use_adc_interrupt){
           if(_start_inj_ADC(adc_handles[i]) == -1) return -1;  
         }
       }
+      #endif
       
       // Start DMA only if there are regular channels to be sampled on this ADC
       if (adc_reg_channel_count[adc_index] > 0){
