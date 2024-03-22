@@ -3,7 +3,6 @@
 #if defined(_STM32_DEF_)
 
 // timer to injected TRGO
-// https://github.com/stm32duino/Arduino_Core_STM32/blob/e156c32db24d69cb4818208ccc28894e2f427cfa/system/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L179
 uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
 
   // This should work with F1 F2 F3 F4 F7
@@ -169,6 +168,191 @@ uint32_t _timerToInjectedTRGO(HardwareTimer* timer){
 #endif
 
   // Return not available if no trigger was found, not that following families have no injected ADC : C0 F0 G0 L0 WL
+  return _TRGO_NOT_AVAILABLE;
+}
+
+// timer to regular TRGO
+uint32_t _timerToRegularTRGO(HardwareTimer* timer){
+
+  // This should work with F0 F1 F2 F3 F4 F7 L0
+#if defined(ADC_EXTERNALTRIGCONV_T1_TRGO) && defined(TIM1)
+  if(timer->getHandle()->Instance == TIM1) return ADC_EXTERNALTRIGCONV_T1_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T2_TRGO) && defined(TIM2)
+  if(timer->getHandle()->Instance == TIM2) return ADC_EXTERNALTRIGCONV_T2_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T3_TRGO) && defined(TIM3)
+  if(timer->getHandle()->Instance == TIM3) return ADC_EXTERNALTRIGCONV_T3_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T4_TRGO) && defined(TIM4)
+  if(timer->getHandle()->Instance == TIM4) return ADC_EXTERNALTRIGCONV_T4_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T5_TRGO) && defined(TIM5)
+  if(timer->getHandle()->Instance == TIM5) return ADC_EXTERNALTRIGCONV_T5_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T6_TRGO) && defined(TIM6)
+  if(timer->getHandle()->Instance == TIM6) return ADC_EXTERNALTRIGCONV_T6_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T7_TRGO) && defined(TIM7)
+  if(timer->getHandle()->Instance == TIM7) return ADC_EXTERNALTRIGCONV_T7_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T8_TRGO) && defined(TIM8)
+  if(timer->getHandle()->Instance == TIM8) return ADC_EXTERNALTRIGCONV_T8_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T9_TRGO) && defined(TIM9)
+  if(timer->getHandle()->Instance == TIM9) return ADC_EXTERNALTRIGCONV_T9_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T10_TRGO) && defined(TIM10)
+  if(timer->getHandle()->Instance == TIM10) return ADC_EXTERNALTRIGCONV_T10_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T11_TRGO) && defined(TIM11)
+  if(timer->getHandle()->Instance == TIM11) return ADC_EXTERNALTRIGCONV_T11_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T12_TRGO) && defined(TIM12)
+  if(timer->getHandle()->Instance == TIM12) return ADC_EXTERNALTRIGCONV_T12_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T13_TRGO) && defined(TIM13)
+  if(timer->getHandle()->Instance == TIM13) return ADC_EXTERNALTRIGCONV_T13_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T14_TRGO) && defined(TIM14)
+  if(timer->getHandle()->Instance == TIM14) return ADC_EXTERNALTRIGCONV_T14_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T15_TRGO) && defined(TIM15)
+  if(timer->getHandle()->Instance == TIM15) return ADC_EXTERNALTRIGCONV_T15_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T16_TRGO) && defined(TIM16)
+  if(timer->getHandle()->Instance == TIM16) return ADC_EXTERNALTRIGCONV_T16_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T17_TRGO) && defined(TIM17)
+  if(timer->getHandle()->Instance == TIM17) return ADC_EXTERNALTRIGCONV_T17_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T18_TRGO) && defined(TIM18)
+  if(timer->getHandle()->Instance == TIM18) return ADC_EXTERNALTRIGCONV_T18_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T19_TRGO) && defined(TIM19)
+  if(timer->getHandle()->Instance == TIM19) return ADC_EXTERNALTRIGCONV_T19_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIGCONV_T20_TRGO) && defined(TIM20)
+  if(timer->getHandle()->Instance == TIM20) return ADC_EXTERNALTRIGCONV_T20_TRGO;
+#endif
+
+// This should work with C0 G0 G4 H5 H7 L4 L5 MP1 U5 WB WL
+#if defined(ADC_EXTERNALTRIG_T1_TRGO) && defined(TIM1)
+  if(timer->getHandle()->Instance == TIM1) return ADC_EXTERNALTRIG_T1_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T2_TRGO) && defined(TIM2)
+  if(timer->getHandle()->Instance == TIM2) return ADC_EXTERNALTRIG_T2_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T3_TRGO) && defined(TIM3)
+  if(timer->getHandle()->Instance == TIM3) return ADC_EXTERNALTRIG_T3_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T4_TRGO) && defined(TIM4)
+  if(timer->getHandle()->Instance == TIM4) return ADC_EXTERNALTRIG_T4_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T5_TRGO) && defined(TIM5)
+  if(timer->getHandle()->Instance == TIM5) return ADC_EXTERNALTRIG_T5_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T6_TRGO) && defined(TIM6)
+  if(timer->getHandle()->Instance == TIM6) return ADC_EXTERNALTRIG_T6_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T7_TRGO) && defined(TIM7)
+  if(timer->getHandle()->Instance == TIM7) return ADC_EXTERNALTRIG_T7_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T8_TRGO) && defined(TIM8)
+  if(timer->getHandle()->Instance == TIM8) return ADC_EXTERNALTRIG_T8_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T9_TRGO) && defined(TIM9)
+  if(timer->getHandle()->Instance == TIM9) return ADC_EXTERNALTRIG_T9_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T10_TRGO) && defined(TIM10)
+  if(timer->getHandle()->Instance == TIM10) return ADC_EXTERNALTRIG_T10_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T11_TRGO) && defined(TIM11)
+  if(timer->getHandle()->Instance == TIM11) return ADC_EXTERNALTRIG_T11_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T12_TRGO) && defined(TIM12)
+  if(timer->getHandle()->Instance == TIM12) return ADC_EXTERNALTRIG_T12_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T13_TRGO) && defined(TIM13)
+  if(timer->getHandle()->Instance == TIM13) return ADC_EXTERNALTRIG_T13_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T14_TRGO) && defined(TIM14)
+  if(timer->getHandle()->Instance == TIM14) return ADC_EXTERNALTRIG_T14_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T15_TRGO) && defined(TIM15)
+  if(timer->getHandle()->Instance == TIM15) return ADC_EXTERNALTRIG_T15_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T16_TRGO) && defined(TIM16)
+  if(timer->getHandle()->Instance == TIM16) return ADC_EXTERNALTRIG_T16_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T17_TRGO) && defined(TIM17)
+  if(timer->getHandle()->Instance == TIM17) return ADC_EXTERNALTRIG_T17_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T18_TRGO) && defined(TIM18)
+  if(timer->getHandle()->Instance == TIM18) return ADC_EXTERNALTRIG_T18_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T19_TRGO) && defined(TIM19)
+  if(timer->getHandle()->Instance == TIM19) return ADC_EXTERNALTRIG_T19_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T20_TRGO) && defined(TIM20)
+  if(timer->getHandle()->Instance == TIM20) return ADC_EXTERNALTRIG_T20_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T21_TRGO) && defined(TIM21)
+  if(timer->getHandle()->Instance == TIM21) return ADC_EXTERNALTRIG_T21_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T22_TRGO) && defined(TIM22)
+  if(timer->getHandle()->Instance == TIM22) return ADC_EXTERNALTRIG_T22_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T23_TRGO) && defined(TIM23)
+  if(timer->getHandle()->Instance == TIM23) return ADC_EXTERNALTRIG_T23_TRGO;
+#endif
+
+#if defined(ADC_EXTERNALTRIG_T24_TRGO) && defined(TIM24)
+  if(timer->getHandle()->Instance == TIM24) return ADC_EXTERNALTRIG_T24_TRGO;
+#endif
+
+  // Return not available if no trigger was found
   return _TRGO_NOT_AVAILABLE;
 }
 

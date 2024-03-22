@@ -8,9 +8,8 @@
 
 #define _TRGO_NOT_AVAILABLE 12345
 
-// timer to injected TRGO
-// https://github.com/stm32duino/Arduino_Core_STM32/blob/e156c32db24d69cb4818208ccc28894e2f427cfa/system/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal_adc_ex.h#L179
-uint32_t _timerToInjectedTRGO(HardwareTimer* timer);
+uint32_t _timerToInjectedTRGO(HardwareTimer* timer); // timer to injected TRGO
+uint32_t _timerToRegularTRGO(HardwareTimer* timer); // timer to regular TRGO
 
 // function returning index of the ADC instance
 int _adcToIndex(ADC_HandleTypeDef *AdcHandle);

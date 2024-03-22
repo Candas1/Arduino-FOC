@@ -248,7 +248,7 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.Resolution = ADC_RESOLUTION_12B;
   #endif
 
-  #if defined(STM32F1xx)
+  #if defined(ADC_SCAN_ENABLE)
   sample.handle->Init.ScanConvMode = ADC_SCAN_ENABLE; 
   #else
   sample.handle->Init.ScanConvMode = ENABLE;

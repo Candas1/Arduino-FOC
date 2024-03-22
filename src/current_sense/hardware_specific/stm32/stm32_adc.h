@@ -108,7 +108,7 @@ typedef struct Stm32ADCSample {
   int pin = NP;
   uint32_t rank = NP;
   uint32_t channel = NP;
-  uint adc_index = NP;
+  int adc_index = NP;
   int index = NP;
   uint32_t SamplingTime = NP;
 } Stm32ADCSample;
