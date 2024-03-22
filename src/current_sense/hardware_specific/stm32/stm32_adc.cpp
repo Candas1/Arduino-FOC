@@ -534,6 +534,26 @@ int _start_inj_ADC_IT(ADC_HandleTypeDef* hadc){
   }
   return 0;
 }
+
+// Writes Injected ADC values to the adc buffer
+void _read_inj_ADC(ADC_HandleTypeDef* hadc){
+
+  int adc_index = _adcToIndex(hadc);
+  int channel_count = adc_inj_channel_count[_adcToIndex(hadc)];
+  for(int i=0;i<channel_count;i++){
+    adc_inj_val[adc_index][i] = HAL_ADCEx_InjectedGetValue(hadc,_getInjADCRank(i+1));
+  } 
+}
+
+// Writes Injected ADC values to the adc buffer for all ADCs that have been initialized
+void _read_inj_ADCs(){
+  for (int i = 0; i < ADC_COUNT; i++){
+    if (adc_handles[i] != NP){
+      _read_inj_ADC(adc_handles[i]);
+    }
+  }
+}
+
 #endif
 
 // Calibrated and starts all the ADCs that have been initialized
@@ -591,26 +611,6 @@ int _start_DMA(ADC_HandleTypeDef* hadc){
     return -1;
   }
   return 0;
-}
-
-
-// Writes Injected ADC values to the adc buffer
-void _read_inj_ADC(ADC_HandleTypeDef* hadc){
-
-  int adc_index = _adcToIndex(hadc);
-  int channel_count = adc_inj_channel_count[_adcToIndex(hadc)];
-  for(int i=0;i<channel_count;i++){
-    adc_inj_val[adc_index][i] = HAL_ADCEx_InjectedGetValue(hadc,_getInjADCRank(i+1));
-  } 
-}
-
-// Writes Injected ADC values to the adc buffer for all ADCs that have been initialized
-void _read_inj_ADCs(){
-  for (int i = 0; i < ADC_COUNT; i++){
-    if (adc_handles[i] != NP){
-      _read_inj_ADC(adc_handles[i]);
-    }
-  }
 }
 
 // Reads value from the adc buffer when adc index and rank are known
