@@ -247,8 +247,8 @@ int _init_ADC(Stm32ADCSample sample)
     SIMPLEFOC_DEBUG("STM32-CS: Using ADC: ", (int) sample.adc_index+1);
   #endif
   
-  #ifdef ADC_CLOCK_SYNC_PCLK_DIV4
-  sample.handle->Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  #ifdef ADC_CLOCK_DIV
+  sample.handle->Init.ClockPrescaler = ADC_CLOCK_DIV;
   #endif
   #ifdef ADC_RESOLUTION_12B
   sample.handle->Init.Resolution = ADC_RESOLUTION_12B;

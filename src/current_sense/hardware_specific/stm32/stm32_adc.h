@@ -101,6 +101,16 @@
 #endif
 #endif /* !ADC_SAMPLINGTIME_INTERNAL */
 
+#ifndef ADC_CLOCK_DIV
+#ifdef ADC_CLOCK_SYNC_PCLK_DIV4
+#define ADC_CLOCK_DIV       ADC_CLOCK_SYNC_PCLK_DIV4
+#elif ADC_CLOCK_SYNC_PCLK_DIV2
+#define ADC_CLOCK_DIV       ADC_CLOCK_SYNC_PCLK_DIV2
+#elif defined(ADC_CLOCK_ASYNC_DIV4)
+#define ADC_CLOCK_DIV       ADC_CLOCK_ASYNC_DIV4
+#endif
+#endif /* !ADC_CLOCK_DIV */
+
 typedef struct Stm32ADCSample {
   ADC_TypeDef* Instance = NP;
   ADC_HandleTypeDef* handle = NP;
