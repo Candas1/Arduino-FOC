@@ -226,9 +226,7 @@ int _init_ADC(Stm32ADCSample sample)
   #endif
   #if !defined(STM32F1xx) && !defined(STM32H7xx) && !defined(STM32MP1xx) && \
       !defined(ADC1_V2_5)
-  if (ADCEngine.reg_channel_count[sample.adc_index] > 1){
-    sample.handle->Init.DMAContinuousRequests = ENABLE;
-  }
+  sample.handle->Init.DMAContinuousRequests = ENABLE;
   #endif
   #ifdef ADC_EOC_SINGLE_CONV
   sample.handle->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
@@ -237,10 +235,7 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.Overrun = ADC_OVR_DATA_PRESERVED;
   #endif
 
-  // Init DMA only if there are several regular channels to be sampled on this ADC
-  if (ADCEngine.reg_channel_count[sample.adc_index] > 1){
-    if (_init_DMA(sample.handle) == -1) return -1;
-  }
+  if (_init_DMA(sample.handle) == -1) return -1;
 
   if ( HAL_ADC_Init(sample.handle) != HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
@@ -471,11 +466,7 @@ int _start_ADCs(void* _csparams){
 
       // Start ADC with DMA only if there are several regular channels to be sampled on this ADC
       if (ADCEngine.reg_channel_count[adc_index] > 0){
-        if (ADCEngine.reg_channel_count[adc_index] > 1){
-          if(_start_DMA_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
-        }else{
-          if(_start_reg_ADC(ADCEngine.adc_handles[i]) == -1) return -1;   
-        }
+        if(_start_DMA_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
       }
       #else
       if (ADCEngine.reg_channel_count[adc_index] > 0){
@@ -488,10 +479,8 @@ int _start_ADCs(void* _csparams){
           if(_start_reg_ADC_IT(ADCEngine.adc_handles[i]) == -1) return -1;
           interrupt_adc = ADCEngine.adc_handles[i]; // Save adc handle triggering the interrupt
         }else{
-          if (ADCEngine.reg_channel_count[adc_index] > 1){
+          if (ADCEngine.reg_channel_count[adc_index] > 0){
             if(_start_DMA_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
-          }else{
-            if(_start_reg_ADC(ADCEngine.adc_handles[i]) == -1) return -1;   
           }  
         }
       }
@@ -529,13 +518,8 @@ uint32_t _read_ADC_register(int i){
     // return injected ADC value from injected ADC register
     return HAL_ADCEx_InjectedGetValue(ADCEngine.samples[i].handle,ADCEngine.samples[i].rank);
   }else{
-    if (ADCEngine.reg_channel_count[ADCEngine.samples[i].adc_index] > 1){
-      // return regular adc values from the DMA buffer
-      return _read_ADC_DMA(ADCEngine.samples[i].adc_index,ADCEngine.samples[i].index);
-    }else{
-      // There is only one sample on this ADC so DMA wasn't used, return the regular adc values from the reg ADC register directly
-      return HAL_ADC_GetValue(ADCEngine.adc_handles[ADCEngine.samples[i].adc_index]);
-    }
+    // return regular adc values from the DMA buffer
+    return _read_ADC_DMA(ADCEngine.samples[i].adc_index,ADCEngine.samples[i].index);
   }
 }
 

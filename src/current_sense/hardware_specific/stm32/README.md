@@ -30,7 +30,7 @@ You can force a specific sampling time with the ADC_SAMPLINGTIME_INJ build flag 
 
 ### Regular ADC
 Regular ADC is used for less critical sampling.<BR>
-It uses DMA when more than one channel is sampled on a particular ADC.<BR>
+It uses DMA to copy ADC samples to a buffer.<BR>
 
 ### Internal channels
 You can now sample internal channels (VREF,VBAT,TEMP).<BR>
