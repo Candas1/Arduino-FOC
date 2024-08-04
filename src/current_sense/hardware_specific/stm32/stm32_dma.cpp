@@ -14,6 +14,7 @@ DMA_HandleTypeDef hdma_adc4;
 DMA_HandleTypeDef hdma_adc5;
 #endif
 
+extern Stm32ADCEngine ADCEngine;
 uint16_t adc_dma_buf[ADC_COUNT][MAX_REG_ADC_CHANNELS]={0};
 
 DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
@@ -97,7 +98,7 @@ int _start_DMA_ADC(ADC_HandleTypeDef* hadc){
 
   // Calculate the address for the right row in the array    
   uint32_t* address = (uint32_t*)(adc_dma_buf) + (MAX_REG_ADC_CHANNELS/2*adc_index); 
-  if (HAL_ADC_Start_DMA(hadc,  address , MAX_REG_ADC_CHANNELS) != HAL_OK) 
+  if (HAL_ADC_Start_DMA(hadc,  address , ADCEngine.reg_channel_count[adc_index] ) != HAL_OK) 
   {
     #ifdef SIMPLEFOC_STM32_DEBUG
     SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start DMA for ADC ",_adcToIndex(hadc)+1);
