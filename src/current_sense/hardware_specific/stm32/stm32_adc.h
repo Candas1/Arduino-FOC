@@ -6,32 +6,35 @@
 #include "../../../common/foc_utils.h"
 #include "../../../drivers/hardware_api.h"
 #include "../../../drivers/hardware_specific/stm32/stm32_mcu.h"
+#include "../../../communication/SimpleFOCDebug.h"
 #include "stm32_utils.h"
+#include "stm32_dma.h"
+#include "stm32_mcu.h"
 
 
 #if defined(_STM32_DEF_) 
 
-#ifdef ADC1
+#if defined(ADC1) || defined(ADC) 
 #define ADC1_COUNT 1
 #else 
 #define ADC1_COUNT 0 
 #endif
-#ifdef ADC2
+#if defined(ADC2)
 #define ADC2_COUNT 1
 #else 
 #define ADC2_COUNT 0 
 #endif
-#ifdef ADC3
+#if defined(ADC3)
 #define ADC3_COUNT 1
 #else 
 #define ADC3_COUNT 0 
 #endif
-#ifdef ADC4
+#if defined(ADC4)
 #define ADC4_COUNT 1
 #else 
 #define ADC4_COUNT 0 
 #endif
-#ifdef ADC5
+#if defined(ADC5)
 #define ADC5_COUNT 1
 #else 
 #define ADC5_COUNT 0 
@@ -39,6 +42,8 @@
 
 #define ADC_COUNT (ADC1_COUNT + ADC2_COUNT + ADC3_COUNT + ADC4_COUNT + ADC5_COUNT)
 
+#define MAX_REG_ADC_CHANNELS 16 // Maximum number of samples for Regular ADC
+#define MAX_INJ_ADC_CHANNELS 4  // Maximum number of samples for Injected ADC
 
 #ifndef ADC_SAMPLINGTIME_INJ
 #if defined(ADC_SAMPLETIME_1CYCLE_5)
@@ -102,55 +107,75 @@
 #endif /* !ADC_SAMPLINGTIME_INTERNAL */
 
 #ifndef ADC_CLOCK_DIV
-#ifdef ADC_CLOCK_SYNC_PCLK_DIV4
+#if defined(ADC_CLOCK_SYNC_PCLK_DIV4)
 #define ADC_CLOCK_DIV       ADC_CLOCK_SYNC_PCLK_DIV4
-#elif ADC_CLOCK_SYNC_PCLK_DIV2
+#elif defined(ADC_CLOCK_SYNC_PCLK_DIV2)
 #define ADC_CLOCK_DIV       ADC_CLOCK_SYNC_PCLK_DIV2
 #elif defined(ADC_CLOCK_ASYNC_DIV4)
 #define ADC_CLOCK_DIV       ADC_CLOCK_ASYNC_DIV4
 #endif
 #endif /* !ADC_CLOCK_DIV */
 
-typedef struct Stm32ADCSample {
+enum adc_type : uint8_t {
+  INJECTED_ADC = 0,
+  REGULAR_ADC = 1
+};
+
+typedef struct Stm32ADC {
   ADC_TypeDef* Instance = NP;
   ADC_HandleTypeDef* handle = NP;
-  int type = NP;
-  int pin = NP;
-  uint32_t rank = NP;
-  uint32_t channel = NP;
   int adc_index = NP;
-  int index = NP;
-  uint32_t SamplingTime = NP;
+  uint16_t adc_dma_buf[MAX_REG_ADC_CHANNELS]={0}; // Regular ADC buffer
+} Stm32ADC;
+
+typedef struct Stm32ADCSample {
+  ADC_TypeDef* Instance = NP; // ADC instance
+  ADC_HandleTypeDef* handle = NP; // ADC handle
+  adc_type type; // 0:injected adc 1:regular adc 
+  int pin = NP; // pin
+  int adc_index = NP; // ADC index
+  uint32_t rank = NP; // Rank for the used adc
+  int index = NP; // Rank -1
+  uint32_t channel = NP; // Adc channel
+  uint32_t SamplingTime = NP; 
+  uint8_t buffered = NP; 
+  uint16_t buffer = NP;
+  void* cs_params = nullptr; // Pointer to current sense params
 } Stm32ADCSample;
 
+typedef struct Stm32ADCEngine {
+  ADC_HandleTypeDef* adc_handles[ADC_COUNT] = {NP}; // Handles of the ADC that are initialized
+  int inj_channel_max = 0; 
+  int reg_channel_max = 0;
+  Stm32ADCSample samples[ADC_COUNT * (MAX_REG_ADC_CHANNELS+MAX_INJ_ADC_CHANNELS)] = {}; // The maximum number of sample is the number of ADC * 4 injected + 16 regular
+  int sample_count = 0;
+  ADC_HandleTypeDef *interrupt_adc = NP; // ADC triggering the interrupt
+  int inj_channel_count[ADC_COUNT] = {0}; // Total count of injected channels for an ADC 
+  int reg_channel_count[ADC_COUNT] = {0}; // Total Count of regular channels for an ADC
+  int inj_trigger[ADC_COUNT] = {0}; // Injected Trigger for each ADC
+  int reg_trigger[ADC_COUNT] = {0}; // Regular Trigger for each ADC
+} Stm32ADCEngine;
 
-int _add_inj_ADC_sample(uint32_t pin,int32_t trigger);
-int _add_reg_ADC_sample(uint32_t pin);
-int _add_ADC_sample(uint32_t pin,int32_t trigger,int type);
+int _add_ADC_sample(uint32_t pin,int32_t trigger,adc_type type, void* _csparams = nullptr);
 int _init_ADCs();
 int _init_ADC(Stm32ADCSample sample);
-int _init_DMA(ADC_HandleTypeDef *hadc);
-#ifdef ARDUINO_B_G431B_ESC1
-int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def);
-int _init_OPAMPs(void);
-#endif
 int _add_reg_ADC_channel_config(Stm32ADCSample sample);
 int _calibrate_ADC(ADC_HandleTypeDef* hadc);
-int _start_ADCs(int use_adc_interrupt = 0);
-int _start_DMA(ADC_HandleTypeDef* hadc);
-uint32_t _read_ADC_buf(int adc_index,int index);
-uint32_t _read_DMA_buf(int adc_index,int index);
+int _start_ADCs(void* _csparams);
 uint32_t _read_ADC_sample(int index);
+uint32_t _read_ADC_register(int index);
 uint32_t _read_ADC_pin(int pin);
 
 #ifdef ADC_INJECTED_SOFTWARE_START
 int _add_inj_ADC_channel_config(Stm32ADCSample sample);
 int _start_inj_ADC(ADC_HandleTypeDef* hadc);
 int _start_inj_ADC_IT(ADC_HandleTypeDef* hadc);
-void _read_inj_ADC(ADC_HandleTypeDef* hadc);
-void _read_inj_ADCs(void);
 #endif
+int _start_reg_ADC(ADC_HandleTypeDef* hadc);
+int _start_reg_ADC_IT(ADC_HandleTypeDef* hadc);
 
+void _enable_irq(ADC_HandleTypeDef* hadc);
+void _buffer_ADCs(void);
 
 #endif
 #endif

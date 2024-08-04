@@ -393,129 +393,25 @@ uint32_t _timerToRegularTRGO(HardwareTimer* timer){
   return _TRGO_NOT_AVAILABLE;
 }
 
-int _adcToIndex(ADC_TypeDef *AdcHandle){
-  if(AdcHandle == ADC1) return 0;
+int _adcToIndex(ADC_TypeDef *AdcInstance){
+  if(AdcInstance == ADC1) return 0;
 #ifdef ADC2 // if ADC2 exists
-  else if(AdcHandle == ADC2) return 1;
+  else if(AdcInstance == ADC2) return 1;
 #endif
 #ifdef ADC3 // if ADC3 exists
-  else if(AdcHandle == ADC3) return 2;
+  else if(AdcInstance == ADC3) return 2;
 #endif
 #ifdef ADC4 // if ADC4 exists
-  else if(AdcHandle == ADC4) return 3;
+  else if(AdcInstance == ADC4) return 3;
 #endif
 #ifdef ADC5 // if ADC5 exists
-  else if(AdcHandle == ADC5) return 4;
+  else if(AdcInstance == ADC5) return 4;
 #endif
   return 0;
 }
 
 int _adcToIndex(ADC_HandleTypeDef *AdcHandle){
   return _adcToIndex(AdcHandle->Instance);
-}
-
-uint32_t _getDMARequest(int index){
-  switch(index){
-    #if defined(STM32L4xx)
-    case 0:
-    case 1:
-    case 2:
-      return DMA_REQUEST_0;
-    #endif
-    #if defined(STM32G4xx)
-    #ifdef DMA_REQUEST_ADC1
-    case 0:
-      return DMA_REQUEST_ADC1;
-    #endif
-    #ifdef DMA_REQUEST_ADC2
-    case 1:
-      return DMA_REQUEST_ADC2;
-    #endif
-    #ifdef DMA_REQUEST_ADC3
-    case 2:
-      return DMA_REQUEST_ADC3;
-    #endif
-    #ifdef DMA_REQUEST_ADC4
-    case 3:
-      return DMA_REQUEST_ADC4;
-    #endif
-    #ifdef DMA_REQUEST_ADC5
-    case 4:
-      return DMA_REQUEST_ADC5;
-    #endif
-    #endif
-    default:
-      return 0;
-  }
-}
-
-#if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
-DMA_Stream_TypeDef *_getDMAStream(int index){
-  switch(index){
-    case 0:
-      return DMA2_Stream0;
-    case 1:
-      return DMA2_Stream2;
-    case 2:
-      return DMA2_Stream1;
-    default:
-      return 0;
-  }
-}
-#endif
-
-
-#if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
-uint32_t _getDMAChannel(int index){
-#else
-DMA_Channel_TypeDef *_getDMAChannel(int index){
-#endif
-  switch(index){
-    #if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
-    case 0:   
-      return DMA_CHANNEL_0;
-    case 1:
-      return DMA_CHANNEL_1;
-    case 2:
-      return DMA_CHANNEL_2;
-    #endif
-    
-    #if defined(STM32F1xx)
-    #ifdef DMA1_Channel1
-    case 0:
-      return DMA1_Channel1;
-    #endif
-    case 1:
-      return 0; // Not available for ADC2
-    #ifdef DMA2_Channel5
-    case 2:
-      return DMA2_Channel5;
-    #endif
-    #endif
-
-    #if defined(STM32G4xx) || defined(STM32L4xx)
-    case 0:
-      return DMA1_Channel1;
-    #ifdef DMA1_Channel2
-    case 1:
-      return DMA1_Channel2;
-    #endif
-    #ifdef DMA1_Channel3
-    case 2:
-      return DMA1_Channel3;
-    #endif
-    #ifdef DMA1_Channel4
-    case 3:
-      return DMA1_Channel4;
-    #endif
-    #ifdef DMA1_Channel5
-    case 4:
-      return DMA1_Channel5;
-    #endif
-    #endif
-    default:
-      return 0;
-  }
 }
 
 uint32_t _getRegADCRank(int index)

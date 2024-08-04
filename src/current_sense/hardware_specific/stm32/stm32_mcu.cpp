@@ -4,20 +4,14 @@
 #if defined(_STM32_DEF_)
 
 #include "stm32_mcu.h"
-#include "../../../communication/SimpleFOCDebug.h"
 
 #define _ADC_VOLTAGE 3.3f
 #define _ADC_RESOLUTION 4096.0f
 
-// does adc interrupt need a downsample - per adc (5)
-bool needs_downsample[ADC_COUNT] = {1};
-// downsampling variable - per adc (5)
-uint8_t tim_downsample[ADC_COUNT] = {0};
-
 #ifdef SIMPLEFOC_STM32_ADC_INTERRUPT
-uint8_t use_adc_interrupt = 1;
+uint8_t stm32_use_adc_interrupt = 1;
 #else
-uint8_t use_adc_interrupt = 0;
+uint8_t stm32_use_adc_interrupt = 0;
 #endif
 
 // function reading an ADC value and returning the read voltage
@@ -28,29 +22,32 @@ void* _configureADCInline(const void* driver_params, const int pinA,const int pi
   if( _isset(pinB) ) pinMode(pinB, INPUT);
   if( _isset(pinC) ) pinMode(pinC, INPUT);
 
-  Stm32CurrentSenseParams* params = new Stm32CurrentSenseParams {
+  Stm32CurrentSenseParams* csparams = new Stm32CurrentSenseParams {
     .pins = { pinA, pinB, pinC },
     .adc_voltage_conv = (_ADC_VOLTAGE)/(_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
     .reg_trigger = NP,
+    .type = INLINE,
+    .use_adc_interrupt = NP,
   };
 
-  #if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32F7xx) || defined(STM32G4xx) || defined(STM32L4xx) 
+  #if defined(STM_CURRENT_SENSE_SUPPORTED)
+  // Those pins will be sampled continuously
   for(int i=0;i<3;i++){
-    if _isset(params->pins[i]){
-      params->samples[i] = _add_reg_ADC_sample(params->pins[i]);
+    if _isset(csparams->pins[i]){
+      csparams->samples[i] = _add_ADC_sample(csparams->pins[i],ADC_SOFTWARE_START,REGULAR_ADC);
     }    
   }
 
   _init_ADCs();
-  _start_ADCs();
+  _start_ADCs(csparams);
   #endif
 
-  return params;
+  return csparams;
 }
 
-#if defined(STM32F1xx) || defined(STM32F4xx) || defined(STM32F7xx) || defined(STM32G4xx) || defined(STM32L4xx) 
+#if defined(STM_CURRENT_SENSE_SUPPORTED)
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageInline(const int pinA, const void* cs_params){
   uint32_t raw_adc = _read_ADC_pin(pinA);
@@ -65,17 +62,25 @@ __attribute__((weak))  float _readADCVoltageInline(const int pinA, const void* c
 
 void* _configureADCLowSide(const void* driver_params, const int pinA, const int pinB, const int pinC){
 
-  Stm32CurrentSenseParams* cs_params= new Stm32CurrentSenseParams {
+  Stm32CurrentSenseParams* csparams= new Stm32CurrentSenseParams {
     .pins={(int)NOT_SET, (int)NOT_SET, (int)NOT_SET},
     .adc_voltage_conv = (_ADC_VOLTAGE) / (_ADC_RESOLUTION),
     .samples = {NP,NP,NP},
     .inj_trigger = NP,
     .reg_trigger = NP,
+    .type = LOWSIDE,
+    .use_adc_interrupt = NP,
   };
-  _adc_gpio_init(cs_params, pinA,pinB,pinC);
 
-  if(_adc_init(cs_params, (STM32DriverParams*)driver_params) != 0) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
-  return cs_params;
+  // Fail if this familly is not supported
+  #ifndef STM_CURRENT_SENSE_SUPPORTED
+  return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
+  #endif
+
+  _adc_gpio_init(csparams, pinA,pinB,pinC);
+
+  if(_adc_init(csparams, (STM32DriverParams*)driver_params) != 0) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
+  return csparams;
 }
 
 void _adc_gpio_init(Stm32CurrentSenseParams* cs_params, const int pinA, const int pinB, const int pinC)
@@ -100,69 +105,66 @@ int _adc_init(Stm32CurrentSenseParams* cs_params, const STM32DriverParams* drive
   ADC_TypeDef *Instance = {};
   int status;
 
-  #ifdef ADC_INJECTED_SOFTWARE_START
-  // automating Injected TRGO flag finding - hardware specific
+  // automating TRGO flag finding - hardware specific
   uint8_t tim_num = 0;
   while(driver_params->timers[tim_num] != NP && tim_num < 6){
+    #if defined(ADC_INJECTED_SOFTWARE_START)
+    // Injected ADC is available
     cs_params->inj_trigger = _timerToInjectedTRGO(driver_params->timers[tim_num++]);
     if(cs_params->inj_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
-
-    // this will be the timer with which the ADC will sync
-    cs_params->timer_handle = driver_params->timers[tim_num-1];
-    // done
-    break;
-  }
-  if( cs_params->timer_handle == NP ){
-    // not possible to use these timers for low-side current sense
-    #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot sync any timer to injected channels!");
-    #endif
-    return -1;
-  }
-
-  for(int i=0;i<3;i++){
-    if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->inj_trigger,0);
-      if (cs_params->samples[i] == -1) return -1;
-    }    
-  }
-  #else
-  // automating Injected TRGO flag finding - hardware specific
-  uint8_t tim_num = 0;
-  while(driver_params->timers[tim_num] != NP && tim_num < 6){
+    #else
+    // Injected ADC is not available, use regular ADC
     cs_params->reg_trigger = _timerToRegularTRGO(driver_params->timers[tim_num++]);
     if(cs_params->reg_trigger == _TRGO_NOT_AVAILABLE) continue; // timer does not have valid trgo for injected channels
+    #endif
 
     // this will be the timer with which the ADC will sync
     cs_params->timer_handle = driver_params->timers[tim_num-1];
     // done
     break;
   }
+
   if( cs_params->timer_handle == NP ){
     // not possible to use these timers for low-side current sense
     #ifdef SIMPLEFOC_STM32_DEBUG
+    #if defined(ADC_INJECTED_SOFTWARE_START)
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot sync any timer to injected channels!");
+    #else
     SIMPLEFOC_DEBUG("STM32-CS: ERR: cannot sync any timer to regular channels!");
+    #endif
     #endif
     return -1;
   }
 
+  cs_params->use_adc_interrupt = stm32_use_adc_interrupt;
+  if (!IS_TIM_REPETITION_COUNTER_INSTANCE(cs_params->timer_handle->getHandle()->Instance) && !cs_params->use_adc_interrupt){
+    // With low side current sensing, if the timer has no repetition counter, it needs to use the interrupt to sample at V0 only 
+    cs_params->use_adc_interrupt = 1;
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: timer has no repetition counter, ADC interrupt has to be used");
+    #endif
+  }
+
   for(int i=0;i<3;i++){
     if _isset(cs_params->pins[i]){
-      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->reg_trigger,1);
+      #if defined(ADC_INJECTED_SOFTWARE_START)
+      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->inj_trigger,INJECTED_ADC,cs_params);
+      #else
+      cs_params->samples[i] = _add_ADC_sample(cs_params->pins[i],cs_params->reg_trigger,REGULAR_ADC,cs_params);
+      #endif
       if (cs_params->samples[i] == -1) return -1;
     }    
   }
-  #endif
 
   #ifdef ARDUINO_B_G431B_ESC1
   // Add other channels to sample on this specific board
-  if (_add_inj_ADC_sample(A_BEMF1,cs_params->inj_trigger) == -1) return -1;
-  if (_add_inj_ADC_sample(A_BEMF2,cs_params->inj_trigger) == -1) return -1;
-  if (_add_inj_ADC_sample(A_BEMF3,cs_params->inj_trigger) == -1) return -1;
-  if (_add_reg_ADC_sample(A_POTENTIOMETER) == -1) return -1;
-  if (_add_reg_ADC_sample(A_TEMPERATURE) == -1) return -1;
-  if (_add_reg_ADC_sample(A_VBUS) == -1) return -1;
- 
+  if (_add_ADC_sample(A_BEMF1,cs_params->inj_trigger,INJECTED_ADC) == -1) return -1;
+  if (_add_ADC_sample(A_BEMF2,cs_params->inj_trigger,INJECTED_ADC) == -1) return -1;
+  if (_add_ADC_sample(A_BEMF3,cs_params->inj_trigger,INJECTED_ADC) == -1) return -1;
+  if (_add_ADC_sample(A_POTENTIOMETER,ADC_SOFTWARE_START,REGULAR_ADC) == -1) return -1;
+  if (_add_ADC_sample(A_TEMPERATURE,ADC_SOFTWARE_START,REGULAR_ADC) == -1) return -1;
+  if (_add_ADC_sample(A_VBUS,ADC_SOFTWARE_START,REGULAR_ADC) == -1) return -1;
+  
   // Initialize Opamps
   if (_init_OPAMPs() == -1) return -1;
   #endif
@@ -191,22 +193,12 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
     //   - only necessary for the timers that have repetition counters
     cs_params->timer_handle->getHandle()->Instance->CR1 |= TIM_CR1_DIR;
     cs_params->timer_handle->getHandle()->Instance->CNT =  cs_params->timer_handle->getHandle()->Instance->ARR;
-    // remember that this timer has repetition counter - no need to downsample
-    needs_downsample[0] = 0;
-  }else{
-    if(!use_adc_interrupt){
-      // If the timer has no repetition counter, it needs to use the interrupt to downsample for low side sensing
-      use_adc_interrupt = 1;
-      #ifdef SIMPLEFOC_STM32_DEBUG
-      SIMPLEFOC_DEBUG("STM32-CS: timer has no repetition counter, ADC interrupt has to be used");
-      #endif
-    }
   }
   
   // set the trigger output event
   LL_TIM_SetTriggerOutput(cs_params->timer_handle->getHandle()->Instance, LL_TIM_TRGO_UPDATE);
  
-  _start_ADCs(use_adc_interrupt);
+  _start_ADCs(cs_params);
 
   // restart all the timers of the driver
   _startTimers(driver_params->timers, 6);
@@ -214,11 +206,6 @@ void _driverSyncLowSide(void* _driver_params, void* _cs_params){
 
 // function reading an ADC value and returning the read voltage
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
-  // Only if injected ADC available
-  #ifdef ADC_INJECTED_SOFTWARE_START
-  if (!use_adc_interrupt) _read_inj_ADCs(); // Fill the adc buffer now in case no interrup is used
-  #endif
-
   for(int i=0; i < 3; i++){
     if( pin == ((Stm32CurrentSenseParams*)cs_params)->pins[i]){ // found in the buffer
       return _read_ADC_sample(((Stm32CurrentSenseParams*)cs_params)->samples[i]) * ((Stm32CurrentSenseParams*)cs_params)->adc_voltage_conv;
@@ -230,20 +217,10 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
 extern "C" {
   // Only if injected ADC available
   #ifdef ADC_INJECTED_SOFTWARE_START
-  void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *AdcHandle){
-    // calculate the instance
-    int adc_index = _adcToIndex(AdcHandle);
-
-    // if the timer han't repetition counter - downsample two times
-    if( needs_downsample[adc_index] && tim_downsample[adc_index]++ > 0) {
-      tim_downsample[adc_index] = 0;
-      return;
-    }
-    
-    _read_inj_ADCs(); // fill the ADC buffer
+  void HAL_ADCEx_InjectedConvCpltCallback(ADC_HandleTypeDef *AdcHandle){   
+    _buffer_ADCs(); // fill the ADC buffer
   }
   #endif
 }
-
 
 #endif

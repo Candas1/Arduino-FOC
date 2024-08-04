@@ -4,144 +4,61 @@
 #if defined(_STM32_DEF_)
 
 #include "stm32_adc.h"
-#include "stm32_utils.h"
-#include "../../../communication/SimpleFOCDebug.h"
 
 ADC_HandleTypeDef hadc1;
-DMA_HandleTypeDef hdma_adc1;
 #ifdef ADC2
 ADC_HandleTypeDef hadc2;
-DMA_HandleTypeDef hdma_adc2;
 #endif
 #ifdef ADC3
 ADC_HandleTypeDef hadc3;
-DMA_HandleTypeDef hdma_adc3;
 #endif
 #ifdef ADC4
 ADC_HandleTypeDef hadc4;
-DMA_HandleTypeDef hdma_adc4;
 #endif
 #ifdef ADC5
 ADC_HandleTypeDef hadc5;
-DMA_HandleTypeDef hdma_adc5;
 #endif
 
-#ifdef ARDUINO_B_G431B_ESC1
-OPAMP_HandleTypeDef hopamp1;
-OPAMP_HandleTypeDef hopamp2;
-OPAMP_HandleTypeDef hopamp3;
-#endif
+Stm32ADCEngine ADCEngine;
 
-#define MAX_REG_ADC_CHANNELS 16
-#define MAX_INJ_ADC_CHANNELS 4
-
-// array of values of 4 injected channels per adc instance (5)
-uint16_t adc_reg_val[ADC_COUNT][MAX_REG_ADC_CHANNELS]={0};
-uint16_t adc_inj_val[ADC_COUNT][MAX_INJ_ADC_CHANNELS]={0};
-Stm32ADCSample samples[ADC_COUNT * (MAX_REG_ADC_CHANNELS+MAX_INJ_ADC_CHANNELS)] = {}; // The maximum number of sample is the number of ADC * 4 injected + 16 regular
-int sample_count = 0;
-
-ADC_HandleTypeDef* adc_handles[ADC_COUNT] = {NP}; // Handles of the ADC that are initialized
-int adc_inj_channel_count[ADC_COUNT] = {0}; // Total count of injected channels for an ADC 
-int adc_reg_channel_count[ADC_COUNT] = {0}; // Total Count of regular channels for an ADC
-int adc_inj_trigger[ADC_COUNT] = {0};
-int adc_reg_trigger[ADC_COUNT] = {0};
 ADC_HandleTypeDef *interrupt_adc = NP;
-int max_inj_adc = 0;
-int max_reg_adc = 0;
 
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance){
-  if (Instance == ADC1) return &hadc1;
-  #ifdef ADC2
-  else if (Instance == ADC2) return &hadc2; 
-  #endif
-  #ifdef ADC3
-  else if (Instance == ADC3) return &hadc3;
-  #endif
-  #ifdef ADC4
-  else if (Instance == ADC4) return &hadc4;
-  #endif
-  #ifdef ADC5
-  else if (Instance == ADC5) return &hadc5;
-  #endif
-  else return nullptr;
-}
-
-DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
-  if (Instance == ADC1) return &hdma_adc1;
-  #ifdef ADC2
-  else if (Instance == ADC2) return &hdma_adc2; 
-  #endif
-  #ifdef ADC3
-  else if (Instance == ADC3) return &hdma_adc3;
-  #endif
-  #ifdef ADC4
-  else if (Instance == ADC4) return &hdma_adc4;
-  #endif
-  #ifdef ADC5
-  else if (Instance == ADC5) return &hdma_adc5;
+  
+  #if defined(ADC)
+  if (Instance == ADC) return &hadc1;
+  #else if 
+    if (Instance == ADC1) return &hadc1;
+    #ifdef ADC2
+    else if (Instance == ADC2) return &hadc2; 
+    #endif
+    #ifdef ADC3
+    else if (Instance == ADC3) return &hadc3;
+    #endif
+    #ifdef ADC4
+    else if (Instance == ADC4) return &hadc4;
+    #endif
+    #ifdef ADC5
+    else if (Instance == ADC5) return &hadc5;
+    #endif
   #endif
   else return nullptr;
 }
 
-#ifdef ARDUINO_B_G431B_ESC1
-int _init_OPAMP(OPAMP_HandleTypeDef *hopamp, OPAMP_TypeDef *OPAMPx_Def){
-  // could this be replaced with LL_OPAMP calls??
-  hopamp->Instance = OPAMPx_Def;
-  hopamp->Init.PowerMode = OPAMP_POWERMODE_HIGHSPEED;
-  hopamp->Init.Mode = OPAMP_PGA_MODE;
-  hopamp->Init.NonInvertingInput = OPAMP_NONINVERTINGINPUT_IO0;
-  hopamp->Init.InternalOutput = DISABLE;
-  hopamp->Init.TimerControlledMuxmode = OPAMP_TIMERCONTROLLEDMUXMODE_DISABLE;
-  hopamp->Init.PgaConnect = OPAMP_PGA_CONNECT_INVERTINGINPUT_IO0_BIAS;
-  hopamp->Init.PgaGain = OPAMP_PGA_GAIN_16_OR_MINUS_15;
-  hopamp->Init.UserTrimming = OPAMP_TRIMMING_FACTORY;
-  if (HAL_OPAMP_Init(hopamp) != HAL_OK)
-  {
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP init failed!");
-    return -1;
-  }
-
-  if (HAL_OPAMP_SelfCalibrate(hopamp) != HAL_OK)
-  {
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP calibrate failed!");
-    return -1;
-  }
-
-  if (HAL_OPAMP_Start(hopamp) != HAL_OK)
-  {
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: OPAMP start failed!");
-    return -1;
-  }
-
-  return 0;
-}
-
-int _init_OPAMPs(void){
-  // Initialize Opamps
-  if (_init_OPAMP(&hopamp1,OPAMP1) == -1) return -1;
-	if (_init_OPAMP(&hopamp2,OPAMP2) == -1) return -1;
-	if (_init_OPAMP(&hopamp3,OPAMP3) == -1) return -1;
-  return 0;
-}
-
-#endif
-
-int _add_inj_ADC_sample(uint32_t pin,int32_t trigger){
-  return _add_ADC_sample(pin,trigger,0);
-}
-
-int _add_reg_ADC_sample(uint32_t pin){
-  return _add_ADC_sample(pin,ADC_SOFTWARE_START,1);
-}
-
-int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
+int _add_ADC_sample(uint32_t pin,int32_t trigger,adc_type type,void* _cs_params){
   ADC_TypeDef *Instance;
   Stm32ADCSample sample = {};
   
-  PinName pinname = analogInputToPinName(pin);  
+  #ifndef ADC_INJECTED_SOFTWARE_START
+  if (type == INJECTED_ADC){
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: inj ADC not available: ", (int) sample.adc_index+1);
+    #endif
+  }
+  #endif
   
-
+  PinName pinname = analogInputToPinName(pin);
+  
   // If internal channel, the ADC instance depends on the chip family
   if ((pin & PADC_BASE) && (pin < ANA_START)) {
   #if defined(STM32H7xx) || defined(STM32MP1xx)
@@ -161,15 +78,15 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
   #endif
   #endif
       sample.channel = get_adc_internal_channel(pinname);
-      sample.SamplingTime = ADC_SAMPLINGTIME_INTERNAL;
-    } else {
-      // Initialize the pin mode
+      sample.SamplingTime = ADC_SAMPLINGTIME_INTERNAL; // Long sampling time for internal channels
+  } else {
+      // This is not an internal channel, Initialize the pin mode
       pinmap_pinout(pinname, PinMap_ADC);
       
-      // for normal channels, identify the adc instance from the pinmap
+      // Identify the adc instance from the pinmap
       Instance = (ADC_TypeDef*)pinmap_peripheral(pinname, PinMap_ADC);
       sample.channel   = _getADCChannel(pinname);
-      if (type == 0){
+      if (type == INJECTED_ADC){
         sample.SamplingTime = ADC_SAMPLINGTIME_INJ; // Short sampling time for injected adc sampling
       }else{
         sample.SamplingTime = ADC_SAMPLINGTIME; // Longer sampling time for regular adc sampling
@@ -180,55 +97,76 @@ int _add_ADC_sample(uint32_t pin,int32_t trigger,int type){
   ADC_HandleTypeDef* hadc = _get_ADC_handle(Instance);
   int adc_index = _adcToIndex(Instance);
 
-  adc_handles[adc_index] = hadc; // Store in list of adc handles to be able to loop through later
+  ADCEngine.adc_handles[adc_index] = hadc; // Store in list of adc handles to be able to loop through later
   
   sample.Instance  = Instance;
   sample.type      = type; // 0 = inj, 1 = reg
   sample.handle    = hadc;
   sample.pin       = pin;
   sample.adc_index = adc_index;
+  sample.cs_params = _cs_params;
+
+  sample.buffered = 0;
+  if (_cs_params != nullptr){
+    Stm32CurrentSenseParams* cs_params = (Stm32CurrentSenseParams*)_cs_params;
+    if (cs_params->use_adc_interrupt && cs_params->type == LOWSIDE) sample.buffered = 1;
+  }
   
-  if (type == 0){
+  if (type == INJECTED_ADC){
     #ifdef ADC_INJECTED_SOFTWARE_START
-    if (adc_inj_channel_count[adc_index] == MAX_INJ_ADC_CHANNELS){
+    if (ADCEngine.inj_channel_count[adc_index] == MAX_INJ_ADC_CHANNELS){
       #ifdef SIMPLEFOC_STM32_DEBUG
       SIMPLEFOC_DEBUG("STM32-CS: ERR: max inj channel reached: ", (int) sample.adc_index+1);
       #endif  
     }
-    adc_inj_trigger[adc_index] = trigger;
-    sample.rank = _getInjADCRank(adc_inj_channel_count[adc_index] + 1);
-    sample.index = adc_inj_channel_count[adc_index];
-    adc_inj_channel_count[adc_index]++; // Increment total injected channel count for this ADC
-    max_inj_adc = max(max_inj_adc,adc_inj_channel_count[adc_index]); // Longest number of injected adc channels
+
+    if (ADCEngine.inj_trigger[adc_index] != trigger){
+      #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: inj ADC has different trigger: ", (int) sample.adc_index+1);
+      #endif  
+    }
+
+    ADCEngine.inj_trigger[adc_index] = trigger;
+    sample.rank = _getInjADCRank(ADCEngine.inj_channel_count[adc_index] + 1);
+    sample.index = ADCEngine.inj_channel_count[adc_index];
+    ADCEngine.inj_channel_count[adc_index]++; // Increment total injected channel count for this ADC
+    ADCEngine.inj_channel_max = max(ADCEngine.inj_channel_max,ADCEngine.inj_channel_count[adc_index]); // Longest number of injected adc channels
     #endif
   }else{
-    if (adc_reg_channel_count[adc_index] == MAX_REG_ADC_CHANNELS){
+    if (ADCEngine.reg_channel_count[adc_index] == MAX_REG_ADC_CHANNELS){
       #ifdef SIMPLEFOC_STM32_DEBUG
       SIMPLEFOC_DEBUG("STM32-CS: ERR: max reg channel reached: ", (int) sample.adc_index+1);
       #endif  
     }
-    adc_reg_trigger[adc_index] = trigger;
-    sample.rank = _getRegADCRank(adc_reg_channel_count[adc_index] + 1);
-    sample.index = adc_reg_channel_count[adc_index];
-    adc_reg_channel_count[adc_index]++; // Increment total regular channel count for this ADC
-    max_reg_adc = max(max_reg_adc,adc_reg_channel_count[adc_index]); // Longest number of injected adc channels
+
+    if (ADCEngine.reg_trigger[adc_index] != trigger){
+      #ifdef SIMPLEFOC_STM32_DEBUG
+      SIMPLEFOC_DEBUG("STM32-CS: ERR: reg ADC has different trigger: ", (int) sample.adc_index+1);
+      #endif  
+    }
+
+    ADCEngine.reg_trigger[adc_index] = trigger;
+    sample.rank = _getRegADCRank(ADCEngine.reg_channel_count[adc_index] + 1);
+    sample.index = ADCEngine.reg_channel_count[adc_index];
+    ADCEngine.reg_channel_count[adc_index]++; // Increment total regular channel count for this ADC
+    ADCEngine.reg_channel_max = max(ADCEngine.reg_channel_max,ADCEngine.reg_channel_count[adc_index]); // Longest number of injected adc channels
   }
   
-  samples[sample_count] = sample;
-  sample_count++;  
+  ADCEngine.samples[ADCEngine.sample_count] = sample;
+  ADCEngine.sample_count++;  
 
-  return sample_count - 1; // Return index of the sample
+  return ADCEngine.sample_count - 1; // Return index of the sample
 }
 
 int _init_ADCs(){
-  for (int i=0;i<sample_count;i++){
-    if (_init_ADC(samples[i]) == -1) return -1;
-    if (samples[i].type == 0 ){
+  for (int i=0;i<ADCEngine.sample_count;i++){
+    if (_init_ADC(ADCEngine.samples[i]) == -1) return -1;
+    if (ADCEngine.samples[i].type == INJECTED_ADC ){
       #ifdef ADC_INJECTED_SOFTWARE_START
-      if (_add_inj_ADC_channel_config(samples[i]) == -1) return -1;
+      if (_add_inj_ADC_channel_config(ADCEngine.samples[i]) == -1) return -1;
       #endif
     }else{
-      if (_add_reg_ADC_channel_config(samples[i]) == -1) return -1;
+      if (_add_reg_ADC_channel_config(ADCEngine.samples[i]) == -1) return -1;
     }
   }
 
@@ -250,6 +188,7 @@ int _init_ADC(Stm32ADCSample sample)
   #ifdef ADC_CLOCK_DIV
   sample.handle->Init.ClockPrescaler = ADC_CLOCK_DIV;
   #endif
+
   #ifdef ADC_RESOLUTION_12B
   sample.handle->Init.Resolution = ADC_RESOLUTION_12B;
   #endif
@@ -261,6 +200,7 @@ int _init_ADC(Stm32ADCSample sample)
   #endif
 
   sample.handle->Init.ContinuousConvMode = ENABLE;
+  sample.handle->Init.DiscontinuousConvMode = DISABLE;
   
   #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
       !defined(STM32F4xx) && !defined(STM32F7xx) && !defined(STM32G4xx) && \
@@ -270,8 +210,7 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.LowPowerAutoPowerOff  = DISABLE;                       /* ADC automatically powers-off after a conversion and automatically wakes-up when a new conversion is triggered */
   #endif
 
-  sample.handle->Init.DiscontinuousConvMode = DISABLE;
-  sample.handle->Init.ExternalTrigConv = adc_reg_trigger[sample.adc_index];
+  sample.handle->Init.ExternalTrigConv = ADCEngine.reg_trigger[sample.adc_index];
   #if !defined(STM32F1xx) && !defined(ADC1_V2_5)
   if (sample.handle->Init.ExternalTrigConv == ADC_SOFTWARE_START){
     sample.handle->Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -283,11 +222,13 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.DataAlign = ADC_DATAALIGN_RIGHT;
   #endif
   #if !defined(STM32F0xx) && !defined(STM32L0xx)
-  sample.handle->Init.NbrOfConversion = max(1,adc_reg_channel_count[sample.adc_index]); // Minimum 1 for analogread to work
+  sample.handle->Init.NbrOfConversion = max(1,ADCEngine.reg_channel_count[sample.adc_index]); // Minimum 1 for analogread to work
   #endif
   #if !defined(STM32F1xx) && !defined(STM32H7xx) && !defined(STM32MP1xx) && \
       !defined(ADC1_V2_5)
-  sample.handle->Init.DMAContinuousRequests = ENABLE;
+  if (ADCEngine.reg_channel_count[sample.adc_index] > 1){
+    sample.handle->Init.DMAContinuousRequests = ENABLE;
+  }
   #endif
   #ifdef ADC_EOC_SINGLE_CONV
   sample.handle->Init.EOCSelection = ADC_EOC_SINGLE_CONV;
@@ -296,8 +237,8 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.Overrun = ADC_OVR_DATA_PRESERVED;
   #endif
 
-  // Init DMA only if there are regular channels to be sampled on this ADC
-  if (adc_reg_channel_count[sample.adc_index] > 0){
+  // Init DMA only if there are several regular channels to be sampled on this ADC
+  if (ADCEngine.reg_channel_count[sample.adc_index] > 1){
     if (_init_DMA(sample.handle) == -1) return -1;
   }
 
@@ -307,60 +248,6 @@ int _init_ADC(Stm32ADCSample sample)
     #endif
     return -1;
   }
-
-  return 0;
-}
-
-int _init_DMA(ADC_HandleTypeDef *hadc){
-  #if defined(__HAL_RCC_DMAMUX1_CLK_ENABLE)
-  __HAL_RCC_DMAMUX1_CLK_ENABLE();
-  #endif 
-
-  #ifdef __HAL_RCC_DMA1_CLK_ENABLE
-  __HAL_RCC_DMA1_CLK_ENABLE();
-  #endif
-  #ifdef __HAL_RCC_DMA2_CLK_ENABLE
-  __HAL_RCC_DMA2_CLK_ENABLE();
-  #endif
-  
-  int adc_index = _adcToIndex(hadc->Instance);
-
-  #ifdef STM32F1xx
-    if (hadc->Instance == ADC2){
-      SIMPLEFOC_DEBUG("STM32-CS: ERR: DMA can't work with ADC2");
-      return 0;
-    }
-  #endif
-  
-  DMA_HandleTypeDef* hdma_adc = _get_DMA_handle(hadc->Instance);
-  
-  #if defined(STM32G4xx) || defined(STM32L4xx)
-  hdma_adc->Instance = _getDMAChannel(adc_index);
-  hdma_adc->Init.Request = _getDMARequest(adc_index);
-  #endif
-  #if defined(STM32F4xx) || defined(STM32F7xx)
-  hdma_adc->Instance = _getDMAStream(adc_index);
-  hdma_adc->Init.Channel = _getDMAChannel(adc_index);
-  #endif
-  #if defined(STM32F1xx)
-  hdma_adc->Instance = _getDMAChannel(adc_index);
-  #endif
-
-  hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
-  hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
-  hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
-  hdma_adc->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-  hdma_adc->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
-  hdma_adc->Init.Mode = DMA_CIRCULAR;
-  hdma_adc->Init.Priority = DMA_PRIORITY_LOW;
-
-  HAL_DMA_DeInit(hdma_adc);
-  if (HAL_DMA_Init(hdma_adc) != HAL_OK)
-  {
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: DMA Init failed!",_adcToIndex(hadc)+1);
-    return -1;
-  }
-  __HAL_LINKDMA(hadc, DMA_Handle, *hdma_adc);
 
   return 0;
 }
@@ -417,11 +304,9 @@ int _calibrate_ADC(ADC_HandleTypeDef* hadc){
     #endif
     return -1;
   }
-
   #endif
 
   return 0;
-  
 }
 
 
@@ -447,13 +332,12 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   sConfigInjected.InjectedOffset = 0;
   //sConfigInjected.InjecOversamplingMode = DISABLE;
   //sConfigInjected.QueueInjectedContext = DISABLE;
-  
 
   int adc_index = _adcToIndex(sample.handle);
 
-  sConfigInjected.ExternalTrigInjecConv   = adc_inj_trigger[sample.adc_index];
+  sConfigInjected.ExternalTrigInjecConv   = ADCEngine.inj_trigger[sample.adc_index];
   sConfigInjected.InjectedSamplingTime    = sample.SamplingTime;
-  sConfigInjected.InjectedNbrOfConversion = adc_inj_channel_count[adc_index];
+  sConfigInjected.InjectedNbrOfConversion = ADCEngine.inj_channel_count[adc_index];
   sConfigInjected.InjectedRank            = sample.rank;
   sConfigInjected.InjectedChannel         = sample.channel;
   if (HAL_ADCEx_InjectedConfigChannel(sample.handle, &sConfigInjected) != HAL_OK){
@@ -464,7 +348,6 @@ int _add_inj_ADC_channel_config(Stm32ADCSample sample)
   }
 
   return 0;
-
 }
 
 // Starts the injected ADC
@@ -482,49 +365,13 @@ int _start_inj_ADC(ADC_HandleTypeDef* hadc){
   return 0;
 }
 
-// Starts the regular ADC with interrupt
+// Starts injected ADC with interrupt
 int _start_inj_ADC_IT(ADC_HandleTypeDef* hadc){ 
   #ifdef SIMPLEFOC_STM32_DEBUG
   SIMPLEFOC_DEBUG("STM32-CS: start inj ADC with IT:",_adcToIndex(hadc)+1);
   #endif
-
-  // enable interrupt
-  #if defined(STM32F4xx) || defined(STM32F7xx)
-  HAL_NVIC_SetPriority(ADC_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(ADC_IRQn);
-  #endif
-
-  #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
-  if(hadc->Instance == ADC1) {
-    HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
-  }
   
-  #ifdef ADC2
-    else if (hadc->Instance == ADC2) {
-      HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
-    }
-  #endif
-  #ifdef ADC3
-    else if (hadc->Instance == ADC3) {
-      HAL_NVIC_SetPriority(ADC3_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(ADC3_IRQn);
-    } 
-  #endif
-  #ifdef ADC4
-    else if (hadc->Instance == ADC4) {
-      HAL_NVIC_SetPriority(ADC4_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(ADC4_IRQn);
-    } 
-  #endif
-  #ifdef ADC5
-    else if (hadc->Instance == ADC5) {
-      HAL_NVIC_SetPriority(ADC5_IRQn, 0, 0);
-      HAL_NVIC_EnableIRQ(ADC5_IRQn);
-    } 
-  #endif
-  #endif
+  _enable_irq(hadc);
 
   if (HAL_ADCEx_InjectedStart_IT(hadc) !=  HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
@@ -534,112 +381,179 @@ int _start_inj_ADC_IT(ADC_HandleTypeDef* hadc){
   }
   return 0;
 }
-
-// Writes Injected ADC values to the adc buffer
-void _read_inj_ADC(ADC_HandleTypeDef* hadc){
-
-  int adc_index = _adcToIndex(hadc);
-  int channel_count = adc_inj_channel_count[_adcToIndex(hadc)];
-  for(int i=0;i<channel_count;i++){
-    adc_inj_val[adc_index][i] = HAL_ADCEx_InjectedGetValue(hadc,_getInjADCRank(i+1));
-  } 
-}
-
-// Writes Injected ADC values to the adc buffer for all ADCs that have been initialized
-void _read_inj_ADCs(){
-  for (int i = 0; i < ADC_COUNT; i++){
-    if (adc_handles[i] != NP){
-      _read_inj_ADC(adc_handles[i]);
-    }
-  }
-}
-
 #endif
 
-// Calibrated and starts all the ADCs that have been initialized
-int _start_ADCs(int use_adc_interrupt){
-  for (int i = 0; i < ADC_COUNT; i++){
-    if (adc_handles[i] != NP){
-     
-      if(_calibrate_ADC(adc_handles[i]) == -1) return -1;
+// Enable IRQ for ADC interrupt
+void _enable_irq(ADC_HandleTypeDef* hadc){
+  IRQn_Type ADC_IRQ;
+  #if defined(STM32F4xx) || defined(STM32F7xx)
+  ADC_IRQ = ADC_IRQn;
+  #endif
 
-      int  adc_index = _adcToIndex(adc_handles[i]);
-      
-      // Only if Injected ADC is available
-      #ifdef ADC_INJECTED_SOFTWARE_START
-      if (adc_inj_channel_count[adc_index] > 0){
-        // There are injected adc channels to be sampled
-        if (use_adc_interrupt && // if interrupt is required
-            adc_inj_channel_count[adc_index] == max_inj_adc && // if adc is one with the highest number of injected adc channels
-            interrupt_adc == NP // if adc triggering the interrupt is not yet identified
-           ){
-          // Only one ADC is started with interrupt
-          if(_start_inj_ADC_IT(adc_handles[i]) == -1) return -1;
-          interrupt_adc = adc_handles[i]; // Save adc handle triggering the interrupt
-        }else{
-          if(_start_inj_ADC(adc_handles[i]) == -1) return -1;  
-        }
-      }
-      #endif
-      
-      // Start DMA only if there are regular channels to be sampled on this ADC
-      if (adc_reg_channel_count[adc_index] > 0){
-        if(_start_DMA(adc_handles[i]) == -1) return -1;
-      }
-    
-    }
-  }
+  #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
+  if(hadc->Instance == ADC1) ADC_IRQ = ADC1_2_IRQn;
+  #ifdef ADC2
+    else if (hadc->Instance == ADC2) ADC_IRQ = ADC1_2_IRQn;
+  #endif
+  #ifdef ADC3
+    else if (hadc->Instance == ADC3) ADC_IRQ = ADC3_IRQn;
+  #endif
+  #ifdef ADC4
+    else if (hadc->Instance == ADC4) ADC_IRQ = ADC4_IRQn;
+  #endif
+  #ifdef ADC5
+    else if (hadc->Instance == ADC5) ADC_IRQ = ADC5_IRQn;
+  #endif
+  #endif
 
-  return 0;
+  // enable interrupt
+  HAL_NVIC_SetPriority(ADC_IRQ, 0, 0);
+  HAL_NVIC_EnableIRQ(ADC_IRQ);
 }
 
-int _start_DMA(ADC_HandleTypeDef* hadc){
+// Starts the regular ADC with interrupt
+int _start_reg_ADC(ADC_HandleTypeDef* hadc){ 
   #ifdef SIMPLEFOC_STM32_DEBUG
-  SIMPLEFOC_DEBUG("STM32-CS: start DMA for ADC ",_adcToIndex(hadc)+1);
-  #endif  
-
-  if (hadc->DMA_Handle == 0) return 0; // Skip DMA start if no DMA handle
-  int adc_index = _adcToIndex(hadc->Instance);
-
-  // Calculate the address for the right row in the array    
-  uint32_t* address = (uint32_t*)(adc_reg_val) + (MAX_REG_ADC_CHANNELS/2*adc_index); 
-  if (HAL_ADC_Start_DMA(hadc,  address , adc_reg_channel_count[adc_index]) != HAL_OK) 
-  {
+  SIMPLEFOC_DEBUG("STM32-CS: start reg ADC:",_adcToIndex(hadc)+1);
+  #endif
+  
+  if (HAL_ADC_Start(hadc) !=  HAL_OK){
     #ifdef SIMPLEFOC_STM32_DEBUG
-    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start DMA for ADC ",_adcToIndex(hadc)+1);
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start reg ADC:",_adcToIndex(hadc)+1);
+    #endif
+    return -1;
+  }
+  return 0;
+}
+// Starts the regular ADC with interrupt
+int _start_reg_ADC_IT(ADC_HandleTypeDef* hadc){ 
+  #ifdef SIMPLEFOC_STM32_DEBUG
+  SIMPLEFOC_DEBUG("STM32-CS: start reg ADC with IT:",_adcToIndex(hadc)+1);
+  #endif
+  
+  _enable_irq(hadc);
+  
+  if (HAL_ADC_Start_IT(hadc) !=  HAL_OK){
+    #ifdef SIMPLEFOC_STM32_DEBUG
+    SIMPLEFOC_DEBUG("STM32-CS: ERR: can't start reg ADC with IT:",_adcToIndex(hadc)+1);
     #endif
     return -1;
   }
   return 0;
 }
 
-// Reads value from the adc buffer when adc index and rank are known
-uint32_t _read_ADC_buf(int adc_index,int index){
-  return adc_inj_val[adc_index][index];
-}
+// Calibrated and starts all the ADCs that have been initialized
+int _start_ADCs(void* _csparams){
+  Stm32CurrentSenseParams* cs_params = (Stm32CurrentSenseParams*)_csparams;
+ 
+  for (int i = 0; i < ADC_COUNT; i++){
+    if (ADCEngine.adc_handles[i] != NP){
+     
+      if(_calibrate_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
 
-// Reads value from the adc buffer when adc index and rank are known
-uint32_t _read_DMA_buf(int adc_index,int index){
-  return adc_reg_val[adc_index][index];
-}
+      int  adc_index = _adcToIndex(ADCEngine.adc_handles[i]);
+      
+      // Only if Injected ADC is available
+      #ifdef ADC_INJECTED_SOFTWARE_START
+      if (ADCEngine.inj_channel_count[adc_index] > 0){
+        // There are injected adc channels to be sampled
+        if (cs_params->use_adc_interrupt && // if interrupt is required
+            ADCEngine.inj_channel_count[adc_index] == ADCEngine.inj_channel_max && // if adc is one with the highest number of injected adc channels
+            interrupt_adc == NP // if adc triggering the interrupt is not yet identified
+           ){
+          // Only one ADC is started with interrupt
+          if(_start_inj_ADC_IT(ADCEngine.adc_handles[i]) == -1) return -1;
+          interrupt_adc = ADCEngine.adc_handles[i]; // Save adc handle triggering the interrupt
+        }else{
+          if(_start_inj_ADC(ADCEngine.adc_handles[i]) == -1) return -1;  
+        }
+      }
 
-// Reads value from the adc buffer when the sample number is known
-uint32_t _read_ADC_sample(int index){
-  if (samples[index].type == 0){
-    return _read_ADC_buf(samples[index].adc_index,samples[index].index);
-  }else{
-    return _read_DMA_buf(samples[index].adc_index,samples[index].index);
+      // Start ADC with DMA only if there are several regular channels to be sampled on this ADC
+      if (ADCEngine.reg_channel_count[adc_index] > 0){
+        if (ADCEngine.reg_channel_count[adc_index] > 1){
+          if(_start_DMA_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
+        }else{
+          if(_start_reg_ADC(ADCEngine.adc_handles[i]) == -1) return -1;   
+        }
+      }
+      #else
+      if (ADCEngine.reg_channel_count[adc_index] > 0){
+        // There are regular adc channels to be sampled
+        if (cs_params->use_adc_interrupt && // if interrupt is required
+            ADCEngine.reg_channel_count[adc_index] == ADCEngine.reg_channel_max && // if adc is one with the highest number of regular adc channels
+            interrupt_adc == NP // if adc triggering the interrupt is not yet identified
+           ){
+          // Only one ADC is started with interrupt
+          if(_start_reg_ADC_IT(ADCEngine.adc_handles[i]) == -1) return -1;
+          interrupt_adc = ADCEngine.adc_handles[i]; // Save adc handle triggering the interrupt
+        }else{
+          if (ADCEngine.reg_channel_count[adc_index] > 1){
+            if(_start_DMA_ADC(ADCEngine.adc_handles[i]) == -1) return -1;
+          }else{
+            if(_start_reg_ADC(ADCEngine.adc_handles[i]) == -1) return -1;   
+          }  
+        }
+      }
+      #endif
+    }
   }
+
+  return 0;
 }
 
-// Searches the pin on the samples array and reads value from the adc buffer
+// Searches the pin in the sample array and reads value from the adc buffer
 uint32_t _read_ADC_pin(int pin){
-  for (int i=0;i<sample_count;i++){
-    if (samples[i].pin == pin) return _read_ADC_sample(i);
+  for (int i=0;i<ADCEngine.sample_count;i++){
+    if (ADCEngine.samples[i].pin == pin) return _read_ADC_sample(i);
   }
 
   // the pin wasn't found.
   return 0;
+}
+
+// Read ADC value for the sample
+uint32_t _read_ADC_sample(int i){
+  if (ADCEngine.samples[i].buffered){  
+    // Sample value is buffered
+    return ADCEngine.samples[i].buffer;
+  }else{
+    // Read ADC value from register
+    return _read_ADC_register(i);
+  }
+}
+
+// Read ADC value for the sample from Injected register, DMA, or ADC register
+uint32_t _read_ADC_register(int i){
+  if (ADCEngine.samples[i].type == INJECTED_ADC){
+    // return injected ADC value from injected ADC register
+    return HAL_ADCEx_InjectedGetValue(ADCEngine.samples[i].handle,ADCEngine.samples[i].rank);
+  }else{
+    if (ADCEngine.reg_channel_count[ADCEngine.samples[i].adc_index] > 1){
+      // return regular adc values from the DMA buffer
+      return _read_ADC_DMA(ADCEngine.samples[i].adc_index,ADCEngine.samples[i].index);
+    }else{
+      // There is only one sample on this ADC so DMA wasn't used, return the regular adc values from the reg ADC register directly
+      return HAL_ADC_GetValue(ADCEngine.adc_handles[ADCEngine.samples[i].adc_index]);
+    }
+  }
+}
+
+// Buffers sampled value if needed (no repetition counter and low current sensing)
+void _buffer_ADCs(){
+  for (int i=0;i<ADCEngine.sample_count;i++){
+    // Samples are flagged as buffered if used for low side current sensing
+    if (ADCEngine.samples[i].buffered){
+      if (ADCEngine.samples[i].cs_params != nullptr){
+        Stm32CurrentSenseParams* cs_params = (Stm32CurrentSenseParams*)ADCEngine.samples[i].cs_params;
+          HardwareTimer* pHT = cs_params->timer_handle;
+          TIM_HandleTypeDef* htim = pHT->getHandle();
+          bool dir = __HAL_TIM_IS_TIM_COUNTING_DOWN(htim);
+        // Only buffer adc value if Timer is downcounting  
+        if (dir) ADCEngine.samples[i].buffer = _read_ADC_register(i);
+      }
+    }
+  }
 }
 
 extern "C" {
