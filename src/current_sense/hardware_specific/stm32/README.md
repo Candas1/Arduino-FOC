@@ -14,7 +14,7 @@ If the family is not supported, it will:
 
 The driver was written in a mostly STM family agnotic way, but it wasn't tested on other STM families.<BR>
 There are few things to be checked when extending it:
-- For STM families without Injected ADC (C0 F0 G0 L0 WL), DMA is not yet implemented
+- For STM families without Injected ADC (C0 F0 G0 L0 WL), DMA with interrupt is not yet implemented
 - DMA can have different implementation for each STM family (Instance/channel/stream/request)
 - For the ADC interrupts, there can be different IRQs and IRQ Handlers
 
@@ -31,13 +31,17 @@ You can force a specific sampling time with the ADC_SAMPLINGTIME_INJ build flag 
 ### Regular ADC
 Regular ADC is used for less critical sampling.<BR>
 It uses DMA to copy ADC samples to a buffer.<BR>
+If not triggered by a timer, it will sample in continuous mode.<BR>
+You can force a specific sampling time with the ADC_SAMPLINGTIME build flag (e.g. ADC_SAMPLINGTIME=ADC_SAMPLETIME_8CYCLES_5).<BR>
 
 ### Internal channels
 You can now sample internal channels (VREF,VBAT,TEMP).<BR>
 Those channels require a long sampling time, so the driver picks some of the longest sampling times available on your STM32 chip.<BR>
 You can force a specific sampling time with the ADC_SAMPLINGTIME_INTERNAL build flag (e.g. ADC_SAMPLINGTIME_INTERNAL=ADC_SAMPLETIME_480CYCLES).<BR>
 
-
+### Interrupt
+An interrupt is used with low side current sensing if the timer used to trigger the ADC has no repetition counter, which is used to make sure the low side mosfets are ON.<BR>
+You can force the use of an interrupt if needed with the SIMPLEFOC_STM32_ADC_INTERRUPT build flag.
 
 
 
