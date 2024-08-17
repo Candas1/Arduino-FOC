@@ -18,18 +18,23 @@ extern Stm32ADCEngine ADCEngine;
 uint16_t adc_dma_buf[ADC_COUNT][MAX_REG_ADC_CHANNELS]={0};
 
 DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
-  if (Instance == ADC1) return &hdma_adc1;
-  #ifdef ADC2
-  else if (Instance == ADC2) return &hdma_adc2; 
-  #endif
-  #ifdef ADC3
-  else if (Instance == ADC3) return &hdma_adc3;
-  #endif
-  #ifdef ADC4
-  else if (Instance == ADC4) return &hdma_adc4;
-  #endif
-  #ifdef ADC5
-  else if (Instance == ADC5) return &hdma_adc5;
+  #ifdef ADC
+  // Some families have a single ADC without a number
+  if (Instance == ADC) return &hdma_adc1;
+  #else
+    if (Instance == ADC1) return &hdma_adc1;
+    #ifdef ADC2
+    else if (Instance == ADC2) return &hdma_adc2; 
+    #endif
+    #ifdef ADC3
+    else if (Instance == ADC3) return &hdma_adc3;
+    #endif
+    #ifdef ADC4
+    else if (Instance == ADC4) return &hdma_adc4;
+    #endif
+    #ifdef ADC5
+    else if (Instance == ADC5) return &hdma_adc5;
+    #endif
   #endif
   else return nullptr;
 }
@@ -96,7 +101,7 @@ int _start_DMA_ADC(ADC_HandleTypeDef* hadc){
   if (hadc->DMA_Handle == 0) return 0; // Skip DMA start if no DMA handle
   int adc_index = _adcToIndex(hadc->Instance);
 
-  // Calculate the address for the right row in the array    
+  // Calculate the address for the right row in the dma buffer array    
   uint32_t* address = (uint32_t*)(adc_dma_buf) + (MAX_REG_ADC_CHANNELS/2*adc_index); 
   if (HAL_ADC_Start_DMA(hadc,  address , ADCEngine.reg_channel_count[adc_index] ) != HAL_OK) 
   {
@@ -114,11 +119,10 @@ uint32_t _read_ADC_DMA(int adc_index,int index){
 
 
 #if defined(STM32F0xx) || defined(STM32L0xx) || defined(STM32L1xx)
-  // DMA V1_0 or V1_1 OK
+  // DMA V1_0 and V1_1 OK
   // {Instance, channel, request}
-  // check V1_1 hal drivers
   #ifdef ADC
-  #define DMA_ADC { DMA1_Channel1, 0, 0}
+  #define DMA_ADC { DMA1_Channel1, 0, 0} 
   #endif
 #endif
 
@@ -171,7 +175,7 @@ uint32_t _read_ADC_DMA(int adc_index,int index){
 #endif
 
 #if defined(STM32L4xx)
-  // V1_1 V1_2 V1_3 to be checked, check V1_2 hal driver
+  // V1_1 V1_2(L4R L4S ) V1_3(L4P L4Q) to be checked, check V1_2 hal driver
   // {Instance, channel, request}
   #ifdef ADC1
   #define DMA_ADC1 { DMA1_Channel1, 0, DMA_REQUEST_0}
@@ -187,6 +191,7 @@ uint32_t _read_ADC_DMA(int adc_index,int index){
 #if defined(STM32L5xx)
   // V2_0 to be checked
   // {Instance, channel, request}
+  // Merge with G4
   #ifdef ADC1
   #define DMA_ADC1 { DMA1_Channel1, 0, DMA_REQUEST_0}
   #endif

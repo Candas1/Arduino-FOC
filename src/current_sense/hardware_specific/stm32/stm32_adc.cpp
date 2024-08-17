@@ -25,9 +25,10 @@ ADC_HandleTypeDef *interrupt_adc = NP;
 
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance){
   
-  #if defined(ADC)
+  #ifdef ADC
+  // Some families have a single ADC without a number
   if (Instance == ADC) return &hadc1;
-  #else if 
+  #else 
     if (Instance == ADC1) return &hadc1;
     #ifdef ADC2
     else if (Instance == ADC2) return &hadc2; 
