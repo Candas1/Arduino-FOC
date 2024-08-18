@@ -1,3 +1,5 @@
+#if defined(_STM32_DEF_)
+
 #include "stm32_dma.h"
 
 DMA_HandleTypeDef hdma_adc1;
@@ -302,3 +304,5 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
       return 0;
   }
 }
+
+#endif

@@ -198,6 +198,20 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.ContinuousConvMode = ENABLE;
   sample.handle->Init.DiscontinuousConvMode = DISABLE;
   
+  #if defined(STM32F0xx)
+  sample.handle->Init.SamplingTimeCommon = sample.SamplingTime;
+  #endif
+
+  #if defined(STM32L0xx)
+  sample.handle->Init.SamplingTime = sample.SamplingTime;
+  #endif
+  
+  #if defined(STM32C0xx) || defined(STM32G0xx) || defined(STM32U5xx) || \
+    defined(STM32WBAxx) || defined(STM32WLxx) || defined(ADC_SUPPORT_2_5_MSPS)
+  sample.handle->Init.SamplingTimeCommon1   = sample.SamplingTime;              /* Set sampling time common to a group of channels. */
+  sample.handle->Init.SamplingTimeCommon2   = sample.SamplingTime;              /* Set sampling time common to a group of channels, second common setting possible.*/
+  #endif
+  
   #if !defined(STM32F1xx) && !defined(STM32F2xx) && !defined(STM32F3xx) && \
       !defined(STM32F4xx) && !defined(STM32F7xx) && !defined(STM32G4xx) && \
       !defined(STM32H5xx) && !defined(STM32H7xx) && !defined(STM32L4xx) &&  \
@@ -248,7 +262,17 @@ int _add_reg_ADC_channel_config(Stm32ADCSample sample)
   ADC_ChannelConfTypeDef  AdcChannelConf = {};
   AdcChannelConf.Channel      = sample.channel;            /* Specifies the channel to configure into ADC */
   AdcChannelConf.Rank         = sample.rank;               /* Specifies the rank in the regular group sequencer */
+  
+#if !defined(STM32L0xx)
+  // On L0, the sampling time is common for all channels and it's set on the ADC
+#if !defined(STM32G0xx)
   AdcChannelConf.SamplingTime = sample.SamplingTime;       /* Sampling time value to be set for the selected channel */
+#else
+  // On G0, you pick from two common sampling times that are set on the ADC
+  AdcChannelConf.SamplingTime = ADC_SAMPLINGTIME_COMMON_1;        /* Sampling time value to be set for the selected channel */
+#endif
+#endif
+
 #if defined(ADC_DIFFERENTIAL_ENDED) && !defined(ADC1_V2_5)
   AdcChannelConf.SingleDiff   = ADC_SINGLE_ENDED;                 /* Single-ended input channel */
   AdcChannelConf.OffsetNumber = ADC_OFFSET_NONE;                  /* No offset subtraction */

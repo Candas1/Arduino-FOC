@@ -416,8 +416,20 @@ int _adcToIndex(ADC_HandleTypeDef *AdcHandle){
 
 uint32_t _getRegADCRank(int index)
 {
+
+  // Number of available ranks for each family can be checked with Macro IS_ADC_REGULAR_RANK and IS_ADC_RANK (L0 and WB0)
+  // Most families have 16 ranks
+  // F0,F2,F4 just use int from 1 to 16 instead of Macro
+  // C0,G0,U0,WBA,WL have only 8 ranks
+  // WB can have 8 or 16 ranks depending on the chip
+  // L1 can have 27 or 28 ranks
+  // L0 has to be investigated
+  // We consider only 8 or 16 ranks for simplicity
+
+  #ifndef ADC_REGULAR_RANK_1
+  return index + 1;
+  #else
   switch(index){
-    #if defined(STM32F1xx) || defined(STM32G4xx) || defined(STM32L4xx)
     case 1:
       return ADC_REGULAR_RANK_1;
     case 2:
@@ -434,6 +446,8 @@ uint32_t _getRegADCRank(int index)
       return ADC_REGULAR_RANK_7;
     case 8:
       return ADC_REGULAR_RANK_8;
+    
+    #ifdef ADC_REGULAR_RANK_9
     case 9:
       return ADC_REGULAR_RANK_9;
     case 10:
@@ -451,9 +465,11 @@ uint32_t _getRegADCRank(int index)
     case 16:
       return ADC_REGULAR_RANK_16;
     #endif
+    
     default:
-      return index + 1; // Works for F4
+      return 0;
   }
+  #endif
 }
 
 /* Exported Functions */

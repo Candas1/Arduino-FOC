@@ -12,11 +12,13 @@ If the family is not supported, it will:
 - use analogread for Inline current sense
 - fail for Low-side current 
 
-The driver was written in a mostly STM family agnotic way, but it wasn't tested on other STM families.<BR>
+The driver was mostly written in a STM family agnotic way, but it wasn't tested on other STM families.<BR>
 There are few things to be checked when extending it:
-- For STM families without Injected ADC (C0 F0 G0 L0 WL), DMA with interrupt is not yet implemented
-- DMA can have different implementation for each STM family (Instance/channel/stream/request)
+- STM families (C0,F0,G0,L0 and WL) don't have Injected ADC so Regular ADC should be used. But DMA with interrupt is not yet implemented which prevents the use with a timer without repetition counter and Lowside current sense
+- DMA can have different implementation for each STM family (Instance/channel/stream/request). This information is only available in the datasheet or in STM32CUBEMX
 - For the ADC interrupts, there can be different IRQs and IRQ Handlers
+- Some STM families can only use one common sampling time on same ADC (F0 and L0)
+- Some STM families can only use 2 common sampling time on same ADC (C0,G0,U5,WBA and WL)
 
 ### ADCs
 The driver can use several ADCs in parallel (if available).<BR>

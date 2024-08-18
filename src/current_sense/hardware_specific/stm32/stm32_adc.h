@@ -14,7 +14,7 @@
 
 #if defined(_STM32_DEF_) 
 
-#if defined(ADC1) || defined(ADC) 
+#if defined(ADC1) 
 #define ADC1_COUNT 1
 #else 
 #define ADC1_COUNT 0 
@@ -43,7 +43,11 @@
 #define ADC_COUNT (ADC1_COUNT + ADC2_COUNT + ADC3_COUNT + ADC4_COUNT + ADC5_COUNT)
 
 #ifndef MAX_REG_ADC_CHANNELS
-#define MAX_REG_ADC_CHANNELS 16 // Maximum number of samples for Regular ADC
+  #if !defined(ADC_REGULAR_RANK_1) || defined(ADC_REGULAR_RANK_9)
+    #define MAX_REG_ADC_CHANNELS 16 // Maximum number of samples for Regular ADC
+  #else
+    #define MAX_REG_ADC_CHANNELS 8 // Maximum number of samples for Regular ADC
+  #endif
 #endif
 #define MAX_INJ_ADC_CHANNELS 4  // Maximum number of samples for Injected ADC
 
