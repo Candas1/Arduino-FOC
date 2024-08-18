@@ -3,6 +3,9 @@
 #include "Arduino.h"
 #include "../../../communication/SimpleFOCDebug.h"
 #include "stm32_adc.h"
+#include "../../hardware_api.h"
+
+#if defined(_STM32_DEF_)
 
 int _init_DMA(ADC_HandleTypeDef *hadc);
 int _start_DMA_ADC(ADC_HandleTypeDef* hadc);
@@ -17,4 +20,6 @@ DMA_Channel_TypeDef *_getDMAChannel(int index);
 DMA_Stream_TypeDef *_getDMAStream(int index);
 #endif
 
+
+#endif
 #endif

@@ -1,3 +1,5 @@
+#include "../../hardware_api.h"
+
 #if defined(_STM32_DEF_)
 
 #include "stm32_dma.h"

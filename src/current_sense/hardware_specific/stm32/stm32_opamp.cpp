@@ -1,4 +1,7 @@
 #include "stm32_opamp.h"
+#include "../../hardware_api.h"
+
+#if defined(_STM32_DEF_)
 
 #ifdef HAL_OPAMP_MODULE_ENABLED
 OPAMP_HandleTypeDef hopamp1;
@@ -45,4 +48,5 @@ int _init_OPAMPs(void){
   return 0;
 }
 
+#endif
 #endif
