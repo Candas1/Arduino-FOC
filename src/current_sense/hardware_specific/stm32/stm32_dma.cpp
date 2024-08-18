@@ -75,12 +75,41 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   #endif
 
   hdma_adc->Init.Direction = DMA_PERIPH_TO_MEMORY;
+  #ifdef DMA_PINC_DISABLE
   hdma_adc->Init.PeriphInc = DMA_PINC_DISABLE;
+  #endif
+
+  #ifdef DMA_MINC_ENABLE
   hdma_adc->Init.MemInc = DMA_MINC_ENABLE;
+  #endif
+
+  #ifdef DMA_PDATAALIGN_HALFWORD
   hdma_adc->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+  #endif
+
+  #ifdef DMA_SRC_DATAWIDTH_HALFWORD
+  hdma_adc->Init.SrcDataWidth = DMA_SRC_DATAWIDTH_HALFWORD;
+  #endif
+  
+  #ifdef DMA_MDATAALIGN_HALFWORD
   hdma_adc->Init.MemDataAlignment = DMA_MDATAALIGN_HALFWORD;
+  #endif
+
+  #ifdef DMA_DEST_DATAWIDTH_HALFWORD
+  hdma_adc->Init.DestDataWidth = DMA_DEST_DATAWIDTH_HALFWORD;
+  #endif
+
+  #ifdef DMA_CIRCULAR
   hdma_adc->Init.Mode = DMA_CIRCULAR;
+  #endif
+
+  #ifdef DMA_PRIORITY_LOW
   hdma_adc->Init.Priority = DMA_PRIORITY_LOW;
+  #endif
+
+  #ifdef DMA_LOW_PRIORITY_LOW_WEIGHT
+  hdma_adc->Init.Priority = DMA_LOW_PRIORITY_LOW_WEIGHT;
+  #endif
 
   HAL_DMA_DeInit(hdma_adc);
   if (HAL_DMA_Init(hdma_adc) != HAL_OK)
