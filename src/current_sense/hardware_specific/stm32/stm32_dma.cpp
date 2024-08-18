@@ -18,23 +18,19 @@ extern Stm32ADCEngine ADCEngine;
 uint16_t adc_dma_buf[ADC_COUNT][MAX_REG_ADC_CHANNELS]={0};
 
 DMA_HandleTypeDef *_get_DMA_handle(ADC_TypeDef* Instance){
-  #ifdef ADC
-  // Some families have a single ADC without a number
-  if (Instance == ADC) return &hdma_adc1;
-  #else
-    if (Instance == ADC1) return &hdma_adc1;
-    #ifdef ADC2
-    else if (Instance == ADC2) return &hdma_adc2; 
-    #endif
-    #ifdef ADC3
-    else if (Instance == ADC3) return &hdma_adc3;
-    #endif
-    #ifdef ADC4
-    else if (Instance == ADC4) return &hdma_adc4;
-    #endif
-    #ifdef ADC5
-    else if (Instance == ADC5) return &hdma_adc5;
-    #endif
+  
+  if (Instance == ADC1) return &hdma_adc1;
+  #ifdef ADC2
+  else if (Instance == ADC2) return &hdma_adc2; 
+  #endif
+  #ifdef ADC3
+  else if (Instance == ADC3) return &hdma_adc3;
+  #endif
+  #ifdef ADC4
+  else if (Instance == ADC4) return &hdma_adc4;
+  #endif
+  #ifdef ADC5
+  else if (Instance == ADC5) return &hdma_adc5;
   #endif
   else return nullptr;
 }

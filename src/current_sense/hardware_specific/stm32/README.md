@@ -27,12 +27,15 @@ This can help reduce the sampling time.
 Injected ADC is used for sampling that requires a critical timing (e.g. low side current sensing).<BR>
 The driver picks some of the shortest sampling time available on your STM32 chip.<BR>
 You can force a specific sampling time with the ADC_SAMPLINGTIME_INJ build flag (e.g. ADC_SAMPLINGTIME_INJ=ADC_SAMPLETIME_1CYCLE_5).<BR>
+Up to 4 injected channels can be sampled per ADC, you will get an error message beyond that.<BR>
 
 ### Regular ADC
 Regular ADC is used for less critical sampling.<BR>
 It uses DMA to copy ADC samples to a buffer.<BR>
 If not triggered by a timer, it will sample in continuous mode.<BR>
 You can force a specific sampling time with the ADC_SAMPLINGTIME build flag (e.g. ADC_SAMPLINGTIME=ADC_SAMPLETIME_8CYCLES_5).<BR>
+Up to 16 inected channels can be sampled per ADC, you will get an error message beyond that.<BR>
+If many ADCs are available, this can lead to a lot of RAM usage. You can use the MAX_REG_ADC_CHANNELS build flag to reduce this. (e.g. MAX_REG_ADC_CHANNELS=4).<BR>
 
 ### Internal channels
 You can now sample internal channels (VREF,VBAT,TEMP).<BR>
@@ -42,6 +45,4 @@ You can force a specific sampling time with the ADC_SAMPLINGTIME_INTERNAL build 
 ### Interrupt
 An interrupt is used with low side current sensing if the timer used to trigger the ADC has no repetition counter, which is used to make sure the low side mosfets are ON.<BR>
 You can force the use of an interrupt if needed with the SIMPLEFOC_STM32_ADC_INTERRUPT build flag.
-
-
 

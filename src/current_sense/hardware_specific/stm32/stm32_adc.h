@@ -42,7 +42,9 @@
 
 #define ADC_COUNT (ADC1_COUNT + ADC2_COUNT + ADC3_COUNT + ADC4_COUNT + ADC5_COUNT)
 
+#ifndef MAX_REG_ADC_CHANNELS
 #define MAX_REG_ADC_CHANNELS 16 // Maximum number of samples for Regular ADC
+#endif
 #define MAX_INJ_ADC_CHANNELS 4  // Maximum number of samples for Injected ADC
 
 #ifndef ADC_SAMPLINGTIME_INJ

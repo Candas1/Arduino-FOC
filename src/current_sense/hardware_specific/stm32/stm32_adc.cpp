@@ -25,23 +25,18 @@ ADC_HandleTypeDef *interrupt_adc = NP;
 
 ADC_HandleTypeDef *_get_ADC_handle(ADC_TypeDef* Instance){
   
-  #ifdef ADC
-  // Some families have a single ADC without a number
-  if (Instance == ADC) return &hadc1;
-  #else 
-    if (Instance == ADC1) return &hadc1;
-    #ifdef ADC2
-    else if (Instance == ADC2) return &hadc2; 
-    #endif
-    #ifdef ADC3
-    else if (Instance == ADC3) return &hadc3;
-    #endif
-    #ifdef ADC4
-    else if (Instance == ADC4) return &hadc4;
-    #endif
-    #ifdef ADC5
-    else if (Instance == ADC5) return &hadc5;
-    #endif
+  if (Instance == ADC1) return &hadc1;
+  #ifdef ADC2
+  else if (Instance == ADC2) return &hadc2; 
+  #endif
+  #ifdef ADC3
+  else if (Instance == ADC3) return &hadc3;
+  #endif
+  #ifdef ADC4
+  else if (Instance == ADC4) return &hadc4;
+  #endif
+  #ifdef ADC5
+  else if (Instance == ADC5) return &hadc5;
   #endif
   else return nullptr;
 }
@@ -223,7 +218,7 @@ int _init_ADC(Stm32ADCSample sample)
   sample.handle->Init.DataAlign = ADC_DATAALIGN_RIGHT;
   #endif
   #if !defined(STM32F0xx) && !defined(STM32L0xx)
-  sample.handle->Init.NbrOfConversion = max(1,ADCEngine.reg_channel_count[sample.adc_index]); // Minimum 1 for analogread to work
+  sample.handle->Init.NbrOfConversion = ADCEngine.reg_channel_count[sample.adc_index]; // Minimum 1 for analogread to work
   #endif
   #if !defined(STM32F1xx) && !defined(STM32H7xx) && !defined(STM32MP1xx) && \
       !defined(ADC1_V2_5)
