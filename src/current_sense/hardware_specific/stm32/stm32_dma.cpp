@@ -62,15 +62,15 @@ int _init_DMA(ADC_HandleTypeDef *hadc){
   
   DMA_HandleTypeDef* hdma_adc = _get_DMA_handle(hadc->Instance);
   
-  #if defined(STM32G4xx) || defined(STM32L4xx)
+  #if defined(STM32C0xx) || defined(STM32G0xx) || defined(STM32G4xx) || defined(STM32H7xx) || defined(STM32U0xx) || defined(STM32L4xx) || defined(STM32L5xx)
   hdma_adc->Instance = _getDMAChannel(adc_index);
   hdma_adc->Init.Request = _getDMARequest(adc_index);
   #endif
-  #if defined(STM32F4xx) || defined(STM32F7xx)
+  #if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
   hdma_adc->Instance = _getDMAStream(adc_index);
   hdma_adc->Init.Channel = _getDMAChannel(adc_index);
   #endif
-  #if defined(STM32F1xx)
+  #if defined(STM32F0xx) || defined(STM32F1xx) || defined(STM32F3xx) || defined(STM32L0xx) || defined(STM32L1xx)
   hdma_adc->Instance = _getDMAChannel(adc_index);
   #endif
 
@@ -148,99 +148,113 @@ uint32_t _read_ADC_DMA(int adc_index,int index){
 
 
 #if defined(STM32F0xx) || defined(STM32L0xx) || defined(STM32L1xx)
-  // DMA V1_0 and V1_1 OK
-  // {Instance, channel, request}
+// DMA V1_0 V1_1 OK
+// {ADC Instance, DMA Instance, channel, request, IRQn}
   #ifdef ADC
-  #define DMA_ADC { DMA1_Channel1, 0, 0} 
+  #define ADC1CONF { ADC, DMA1, DMA1_Channel1, 0, 0, DMA1_Channel1_IRQn} 
   #endif
 #endif
 
-#if defined(STM32F1xx)
+#if defined(STM32F1xx) || defined(STM32F3xx)
 // DMA V1_0 OK
-// {Instance, channel, request}
+// {ADC Instance, DMA Instance, channel, request, IRQn}
   #ifdef ADC1
-  #define DMA_ADC1 { DMA1_Channel1, 0, 0}
+  #define ADC1CONF { ADC1, DMA1, DMA1_Channel1, 0, 0, DMA1_Channel1_IRQn}
   #endif
   #ifdef ADC2
-  #define DMA_ADC2 {             0, 0, 0}
+  #define ADC2CONF { ADC2,    0,             0, 0, 0,                  0}
   #endif
   #ifdef ADC3
-  #define DMA_ADC3 { DMA2_Channel5, 0, 0}
+  #define ADC3CONF { ADC3, DMA2, DMA2_Channel5, 0, 0  DMA2_Channel5_IRQn}
+  #endif
+#endif
+
+#if defined(STM32F3xx)
+// DMA V1_0 OK
+// {ADC Instance, DMA Instance, channel, request, IRQn}
+  #ifdef ADC1
+  #define ADC1CONF { ADC1, DMA1, DMA1_Channel1, 0, 0, DMA1_Channel1_IRQn}
+  #endif
+  #ifdef ADC2
+  #define ADC2CONF { ADC2, DMA2, DMA2_Channel1, 0, 0, DMA2_Channel1_IRQn}
+  #endif
+  #ifdef ADC3
+  #define ADC3CONF { ADC3, DMA2, DMA2_Channel5, 0, 0  DMA2_Channel5_IRQn}
   #endif
 #endif
   
 #if defined(STM32F2xx) || defined(STM32F4xx) || defined(STM32F7xx)
   // DMA V2_0 OK
-  // {Instance, channel, request}
+  // {ADC Instance, DMA Instance, channel, request, IRQn}
   #ifdef ADC1
-  #define DMA_ADC1 { DMA2_Stream0, DMA_CHANNEL_0, 0}
+  #define ADC1CONF { ADC1, DMA2, DMA2_Stream0, DMA_CHANNEL_0, 0, DMA2_Stream0_IRQn}
   #endif
   #ifdef ADC2
-  #define DMA_ADC2 { DMA2_Stream2, DMA_CHANNEL_1, 0 }
+  #define ADC2CONF { ADC2, DMA2, DMA2_Stream2, DMA_CHANNEL_1, 0, DMA2_Stream2_IRQn}
   #endif
   #ifdef ADC3
-  #define DMA_ADC3 { DMA2_Stream1, DMA_CHANNEL_2, 0 }
+  #define ADC3CONF { ADC3, DMA2, DMA2_Stream1, DMA_CHANNEL_2, 0, DMA2_Stream1_IRQn}
   #endif
 #endif
 
 #if defined(STM32C0xx) || defined(STM32G0xx) || defined(STM32G4xx) || defined(STM32H7xx) || defined(STM32U0xx)
   // DMA V1_3 OK
-  // {Instance, channel, request}
+  // {ADC Instance, DMA Instance, channel, request, IRQn}
   #ifdef ADC1
-  #define DMA_ADC1 { DMA1_Channel1, 0, DMA_REQUEST_ADC1}
+  #define ADC1CONF { ADC1, DMA1, DMA1_Channel1, 0, DMA_REQUEST_ADC1, DMA1_Channel1_IRQn}
   #endif
   #ifdef ADC2
-  #define DMA_ADC2 { DMA1_Channel2, 0, DMA_REQUEST_ADC2 }
+  #define ADC2CONF { ADC2, DMA1, DMA1_Channel2, 0, DMA_REQUEST_ADC2, DMA1_Channel2_IRQn}
   #endif
   #ifdef ADC3
-  #define DMA_ADC3 { DMA1_Channel3, 0, DMA_REQUEST_ADC3 }
+  #define ADC3CONF { ADC3, DMA1, DMA1_Channel3, 0, DMA_REQUEST_ADC3, DMA1_Channel3_IRQn}
   #endif
   #ifdef ADC4
-  #define DMA_ADC4 { DMA1_Channel4, 0, DMA_REQUEST_ADC4 }
+  #define ADC4CONF { ADC4, DMA1, DMA1_Channel4, 0, DMA_REQUEST_ADC4, DMA1_Channel4_IRQn}
   #endif
   #ifdef ADC5
-  #define DMA_ADC5 { DMA1_Channel5, 0, DMA_REQUEST_ADC5 }
+  #define ADC5CONF { ADC5, DMA1, DMA1_Channel5, 0, DMA_REQUEST_ADC5, DMA1_Channel5_IRQn}
   #endif
 #endif
 
 #if defined(STM32L4xx)
-  // V1_1 V1_2(L4R L4S ) V1_3(L4P L4Q) to be checked, check V1_2 hal driver
-  // {Instance, channel, request}
+  // V1_1 V1_2(L4R L4S) V1_3(L4P L4Q) to be checked, check V1_2 hal driver
+  // {ADC Instance, DMA Instance, channel, request, IRQn}
   #ifdef ADC1
-  #define DMA_ADC1 { DMA1_Channel1, 0, DMA_REQUEST_0}
+  #define ADC1CONF { ADC1, DMA1, DMA1_Channel1, 0, DMA_REQUEST_0, DMA1_Channel1_IRQn}
   #endif
   #ifdef ADC2
-  #define DMA_ADC2 { DMA1_Channel2, 0, DMA_REQUEST_0 }
+  #define ADC2CONF { ADC2, DMA1, DMA1_Channel2, 0, DMA_REQUEST_0, DMA1_Channel2_IRQn}
   #endif
   #ifdef ADC3
-  #define DMA_ADC3 { DMA1_Channel3, 0, DMA_REQUEST_0 }
+  #define ADC3CONF { ADC3, DMA1, DMA1_Channel3, 0, DMA_REQUEST_0, DMA1_Channel3_IRQn}
   #endif
 #endif
 
 #if defined(STM32L5xx)
   // V2_0 to be checked
-  // {Instance, channel, request}
-  // Merge with G4
+  // {ADC Instance, DMA Instance, channel, request, IRQn}
+  // Merge with L4?
   #ifdef ADC1
-  #define DMA_ADC1 { DMA1_Channel1, 0, DMA_REQUEST_0}
+  #define ADC1CONF { ADC1, DMA1, DMA1_Channel1, 0, DMA_REQUEST_0, DMA1_Channel1_IRQn}
   #endif
   #ifdef ADC2
-  #define DMA_ADC2 { DMA1_Channel2, 0, DMA_REQUEST_0 }
+  #define ADC2CONF { ADC2, DMA1, DMA1_Channel2, 0, DMA_REQUEST_0, DMA1_Channel2_IRQn}
   #endif
   #ifdef ADC3
-  #define DMA_ADC3 { DMA1_Channel3, 0, DMA_REQUEST_0 }
+  #define ADC3CONF { ADC3, DMA1, DMA1_Channel3, 0, DMA_REQUEST_0, DMA1_Channel3_IRQn}
   #endif
 #endif
 
 uint32_t _getDMARequest(int index){
   switch(index){
-    #if defined(STM32L4xx)
+    #if defined(STM32L4xx) || defined(STM32L5xx)
     case 0:
     case 1:
     case 2:
       return DMA_REQUEST_0;
     #endif
-    #if defined(STM32G4xx)
+    #if defined(STM32C0xx) || defined(STM32G0xx) || defined(STM32G4xx) || defined(STM32H7xx) || defined(STM32U0xx)
     #ifdef DMA_REQUEST_ADC1
     case 0:
       return DMA_REQUEST_ADC1;
@@ -311,7 +325,21 @@ DMA_Channel_TypeDef *_getDMAChannel(int index){
     #endif
     #endif
 
-    #if defined(STM32G4xx) || defined(STM32L4xx)
+    #if defined(STM32F3xx)
+    #ifdef DMA1_Channel1
+    case 0:
+      return DMA1_Channel1;
+    #endif
+    case 1:
+      return DMA2_Channel1;
+    #ifdef DMA2_Channel5
+    case 2:
+      return DMA2_Channel5;
+    #endif
+    #endif
+
+
+    #if defined(STM32C0xx) || defined(STM32G0xx) || defined(STM32G4xx) || defined(STM32H7xx) || defined(STM32U0xx) || defined(STM32L4xx) || defined(STM32L5xx)
     case 0:
       return DMA1_Channel1;
     #ifdef DMA1_Channel2
