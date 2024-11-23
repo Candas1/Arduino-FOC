@@ -29,7 +29,7 @@
 
 // Motor instance
 BLDCMotor motor = BLDCMotor(11);
-BLDCDriver6PWM driver = BLDCDriver6PWM(INH_A,INH_A, INH_B,INH_B, INH_C,INL_C, EN_GATE);
+BLDCDriver6PWM driver = BLDCDriver6PWM(INH_A,INL_A, INH_B,INL_B, INH_C,INL_C, EN_GATE);
 
 // encoder instance
 Encoder encoder = Encoder(2, 3, 8192);
@@ -45,6 +45,12 @@ Commander command = Commander(Serial);
 void onMotor(char* cmd){ command.motor(&motor, cmd); }
 
 void setup() {
+
+  // use monitoring with serial 
+  Serial.begin(115200);
+  // enable more verbose output for debugging
+  // comment out if not needed
+  SimpleFOCDebug::enable(&Serial);
 
   // initialize encoder sensor hardware
   encoder.init();
@@ -91,9 +97,6 @@ void setup() {
   // angle loop velocity limit
   motor.velocity_limit = 50;
 
-  // use monitoring with serial for motor init
-  // monitoring port
-  Serial.begin(115200);
   // comment out if not needed
   motor.useMonitoring(Serial);
 
