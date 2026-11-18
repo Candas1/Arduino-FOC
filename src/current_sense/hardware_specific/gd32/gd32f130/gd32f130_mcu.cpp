@@ -88,14 +88,13 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
   return cs_params;
 }
 
-void _driverSyncLowSide(void* _driver_params, void* _cs_params){
-  
-  GD32DriverParams* driver_params = (GD32DriverParams*)_driver_params;
-  GD32CurrentSenseParams* cs_params = (GD32CurrentSenseParams*)_cs_params;
+// since SimpleFOC 2.3.4 it returns the current sense params (or SIMPLEFOC_CURRENT_SENSE_INIT_FAILED)
+void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
 
   // Start T0CH3 for current sampling
   timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,ENABLE);
- 
+
+  return _cs_params;
 }
 
 // function reading an ADC value and returning the read voltage

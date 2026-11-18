@@ -1,8 +1,10 @@
 #include "../../hardware_api.h"
 #include "gd32_mcu.h"
-#include "gd32/PinNames.h"
 
 #if defined(_GD32_DEF_)
+
+// GD32 Arduino core only: must stay inside the guard, the other platforms don't have it
+#include "gd32/PinNames.h"
 
   /*
   uint32_t timerAh,timerAl,timerBh,timerBl,timerCl,timerCh;
