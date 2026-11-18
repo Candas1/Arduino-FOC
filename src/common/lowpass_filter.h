@@ -24,6 +24,8 @@ public:
     ~LowPassFilter() = default;
 
     float operator() (float x);
+    /** same with the elapsed time given by the caller [s], must be > 0 */
+    float operator() (float x, float dt);
     float Tf; //!< Low pass filter time constant
     float Ts; //!< Fixed sampling time (optional default NOT_SET)
 

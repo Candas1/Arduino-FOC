@@ -29,6 +29,8 @@ public:
     ~PIDController() = default;
 
     float operator() (float error);
+    /** same with the elapsed time given by the caller [s] (e.g. measured once per loop for several controllers) */
+    float operator() (float error, float dt);
     void reset();
 
     float P; //!< Proportional gain 
