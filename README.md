@@ -7,49 +7,73 @@
 [![RP2040 build](https://github.com/simplefoc/Arduino-FOC/actions/workflows/rpi.yml/badge.svg)](https://github.com/simplefoc/Arduino-FOC/actions/workflows/rpi.yml)
 [![SAMD build](https://github.com/simplefoc/Arduino-FOC/actions/workflows/samd.yml/badge.svg)](https://github.com/simplefoc/Arduino-FOC/actions/workflows/samd.yml)
 [![Teensy build](https://github.com/simplefoc/Arduino-FOC/actions/workflows/teensy.yml/badge.svg)](https://github.com/simplefoc/Arduino-FOC/actions/workflows/teensy.yml) 
+[![MBED build](https://github.com/simplefoc/Arduino-FOC/actions/workflows/arduino_mbed.yml/badge.svg)](https://github.com/simplefoc/Arduino-FOC/actions/workflows/arduino_mbed.yml)
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/simplefoc/arduino-foc)
 ![GitHub Release Date](https://img.shields.io/github/release-date/simplefoc/arduino-foc?color=blue)
 ![GitHub commits since tagged version](https://img.shields.io/github/commits-since/simplefoc/arduino-foc/latest/dev)
 ![GitHub commit activity (branch)](https://img.shields.io/github/commit-activity/m/simplefoc/arduino-foc/dev)
 
-[![arduino-library-badge](https://ardubadge.simplefoc.com?lib=Simple%20FOC)](https://www.ardu-badge.com/badge/Simple%20FOC.svg)
+[![arduino-library-badge](https://www.ardu-badge.com/badge/Simple%20FOC.svg)](https://www.ardu-badge.com/badge/Simple%20FOC.svg)
 [![PlatformIO Registry](https://badges.registry.platformio.org/packages/askuric/library/Simple%20FOC.svg)](https://registry.platformio.org/libraries/askuric/Simple%20FOC)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![status](https://joss.theoj.org/papers/4382445f249e064e9f0a7f6c1bb06b1d/status.svg)](https://joss.theoj.org/papers/4382445f249e064e9f0a7f6c1bb06b1d)
 
 
-We live in very exciting times 😃! BLDC motors are entering the hobby community more and more and many great projects have already emerged leveraging their far superior dynamics and power capabilities. BLDC motors have numerous advantages over regular DC motors but they have one big disadvantage, the complexity of control. Even though it has become relatively easy to design and manufacture PCBs and create our own hardware solutions for driving BLDC motors the proper low-cost solutions are yet to come. One of the reasons for this is the apparent complexity of writing the BLDC driving algorithms, Field oriented control (FOC) being an example of one of the most efficient ones.
-The solutions that can be found on-line are almost exclusively very specific for certain hardware configuration and the microcontroller architecture used.
-Additionally, most of the efforts at this moment are still channeled towards the high-power applications of the BLDC motors and proper low-cost and low-power FOC supporting boards are very hard to find today and even may not exist. <br>
+We live in very exciting times 😃! BLDC motors are entering the hobby community more and more and many great projects have already emerged leveraging their far superior dynamics and power capabilities. These motors have numerous advantages over regular DC motors but they have one big disadvantage, the complexity of control. Even though it has become relatively easy to design and manufacture PCBs and create our own hardware solutions for driving BLDC motors, the proper low-cost solutions have been challenging to develop. One of the reasons for this is the apparent complexity of writing the driving algorithms, Field Oriented Control (FOC) being one of the most efficient ones.
+The solutions that can be found online are almost exclusively very specific for certain hardware configurations and microcontroller architectures. Similar to BLDCs, Stepper motors can hugely benefit from FOC control, but the solutions for FOC controlled stepper motors are even more scarce.
+<br>
 Therefore this is an attempt to: 
-- 🎯 Demystify FOC algorithm and make a robust but simple Arduino library: [Arduino *SimpleFOClibrary*](https://docs.simplefoc.com/arduino_simplefoc_library_showcase)
+- 🎯 Demystify FOC algorithm and make a robust but simple Arduino library: [Arduino <span class="simple">Simple<span class="foc">FOC</span>library</span>](https://docs.simplefoc.com/arduino_simplefoc_library_showcase)
   - <i>Support as many <b>motor + sensor + driver + mcu</b> combinations out there</i>
-- 🎯 Develop modular and easy to use FOC supporting BLDC driver boards
+  - Make transitioning from one hardware combination to another as seamless as possible
+- 🎯 Develop modular and easy to use FOC supporting driver boards
    - For official driver boards see [<span class="simple">Simple<span class="foc">FOC</span>Boards</span>](https://docs.simplefoc.com/boards)
-   - Many many more boards developed by the community members, see [<span class="simple">Simple<span class="foc">FOC</span>Community</span>](https://community.simplefoc.com/)
-
-> NEXT RELEASE 📢 : <span class="simple">Simple<span class="foc">FOC</span>library</span> v2.3.4
-> - ESP32 MCUs extended support [#414](https://github.com/simplefoc/Arduino-FOC/pull/414)
->   - Transition to the arduino-esp32 version v3.x (ESP-IDF v5.x) [#387](https://github.com/espressif/arduino-esp32/releases)
->   - New support for MCPWM driver
->   - New support for LEDC drivers - center-aligned PWM and 6PWM available 
->   - Rewritten and simplified the fast ADC driver code (`adcRead`) - for low-side and inline current sensing.
-> - Stepper motors current sensing support [#421](https://github.com/simplefoc/Arduino-FOC/pull/421)
->   - Support for current sensing (low-side and inline) - [see in docs](https://docs.simplefoc.com/current_sense)
->   - Support for true FOC control - `foc_current` torque control - [see in docs](https://docs.simplefoc.com/motion_control)
-> - New current sense alignment procedure  [#422](https://github.com/simplefoc/Arduino-FOC/pull/422) - [see in docs](https://docs.simplefoc.com/current_sense_align)
->   - Support for steppers
->   - Much more robust and reliable
->   - More verbose and informative 
-> - Support for HallSensors without interrupts [#424](https://docs.simplefoc.com/https://github.com/simplefoc/Arduino-FOC/pull/424) - [see in docs](hall_sensors) 
-> - Docs
->   - A short guide to debugging of common issues
->   - A short guide to the units in the library - [see in docs](https://docs.simplefoc.com/library_units)
-> - See the complete list of bugfixes and new features of v2.3.4 [fixes and PRs](https://github.com/simplefoc/Arduino-FOC/milestone/11) 
+   - Many many more boards developed by the community members, see [<span class="simple">Simple<span class="foc">FOC</span> Community</span>](https://community.simplefoc.com/)
 
 
-## Arduino *SimpleFOClibrary* v2.3.4
+> NEW RELEASE 📢 : <span class="simple">Simple<span class="foc">FOC</span>library</span> v2.4.0
+> - STM32
+>   - Added support for ADC reads in addition to Lowside current sense [#506](https://github.com/simplefoc/Arduino-FOC/pull/506)
+>   - Added support for multiple motors low-side CS (one per ADC) with ADC current sensing [#503](https://github.com/simplefoc/Arduino-FOC/pull/503)
+>   - BG341 low-side current sense sync was lost in v2.3.5 - fixed [#482](https://github.com/simplefoc/Arduino-FOC/pull/482)
+> - ESP32 
+>   - Many ESP32 safety optimisations by [@uLipe](https://github.com/uLipe): [#490](https://github.com/simplefoc/Arduino-FOC/pull/490),[#491](https://github.com/simplefoc/Arduino-FOC/pull/491),[#492](https://github.com/simplefoc/Arduino-FOC/pull/492),[#493](https://github.com/simplefoc/Arduino-FOC/pull/493),[#495](https://github.com/simplefoc/Arduino-FOC/pull/495)
+>   - Better ADC-Timer alignement for more stable current sensing [See this commit](https://github.com/simplefoc/Arduino-FOC/commit/877699b4db4e6e3ecc16b16cc4337af928e746f4)
+>   - Now compiles for all v3.x arduino-esp32 versions (v2.3.5 was compatible with v3.2.x) 
+>   - `adcRead` small refactor - no more magic numbers
+> - Others
+>   - Teensy4 support for phase state setting [#498](https://github.com/simplefoc/Arduino-FOC/pull/498) by [@Ragiton](https://github.com/Ragiton)
+>   - Added support for Arduino Nano Matter board by [@silabs-szabog](https://github.com/silabs-szabog) : [#485](https://github.com/simplefoc/Arduino-FOC/pull/484)
+> - **Major New features**
+>    - Add current and voltage feed forward terms to motor classes by [@Copper280z](https://github.com/Copper280z) in [#454](https://github.com/simplefoc/Arduino-FOC/pull/454)
+>    - Velocity Calculation rework by [@Copper280z](https://github.com/Copper280z) in [#45](https://github.com/simplefoc/Arduino-FOC/pull/45)
+>    - Motion control - [docs](https://docs.simplefoc.com/motion_control)
+>       - Added `custom` motion control mode - see in [docs](https://docs.simplefoc.com/custom_control) and in [examples](https://github.com/simplefoc/Arduino-FOC/tree/master/examples/motion_control)
+>       - Added `angle_nocascade` control mode for position control without velocity cascade - see in [docs](https://docs.simplefoc.com/angle_loop)  - [#384](https://github.com/simplefoc/Arduino-FOC/pull/384)
+>       - **Now all the closed and open loop modes can be used with any torque control modes (voltage and current)** 
+>           - Ex. `velocity_openloop` with `foc_current` torque control
+>   - Torque control - [docs](https://docs.simplefoc.com/torque_control)
+>      - Added `estimated_current` torque control mode for model-based current estimation without current sensing - see in [docs](https://docs.simplefoc.com/estimated_current_mode) 
+>      - Now we can easily switch between voltage and estimated current control
+> - Docs updates - see [docs](https://docs.simplefoc.com/)
+>     - Write the code page updated - see [docs](https://docs.simplefoc.com/code)
+>     - Better step-by-step setup guides - see [docs](https://docs.simplefoc.com/example_from_scratch)
+>     - New motion control documentation - see [docs](https://docs.simplefoc.com/motion_control)
+>     - New torque/FOC control documentation - see [docs](https://docs.simplefoc.com/torque_control)
+>     - Theory corner updated and extended - see [docs](https://docs.simplefoc.com/theory_corner)
+>     - Library source updated and extended - see [docs](https://docs.simplefoc.com/source_code)
+>     - Practical guides updated and extended - see [docs](https://docs.simplefoc.com/practical_guides)
+>       - Motor parameter measurement guide - see [docs](https://docs.simplefoc.com/practical_guides#motor-parameters-and-characterization)
+>       - PID tuning guides - see [docs](https://docs.simplefoc.com/practical_guides#pid-tuning)
+> - Examples
+>   - `align_current_sense.ino` example added to the `examples/utils/current_sense_test` allowing to verify the alignment between the driver and the current sense phases 
+> - Changelog
+>    - See the release notes for more details: [see release](https://github.com/simplefoc/Arduino-FOC/releases)
+>    - See the milestones: [v2.3.6 (unreleased)](https://github.com/simplefoc/Arduino-FOC/milestone/14) and [v2.4.0](https://github.com/simplefoc/Arduino-FOC/milestone/13)
+
+
+## Arduino *SimpleFOClibrary* ![GitHub release (latest by date)](https://img.shields.io/github/v/release/simplefoc/arduino-foc)
 
 <p align="">
 <a href="https://youtu.be/Y5kLeqTc6Zk">
@@ -57,7 +81,7 @@ Therefore this is an attempt to:
 </a>
 </p>
 
-This video demonstrates the *Simple**FOC**library* basic usage, electronic connections and shows its capabilities.
+This video is a bit outdated but it demonstrates the *Simple**FOC**library* basic usage, electronic connections and shows its capabilities.
 
 ### Features
 - **Easy install**: 
@@ -65,24 +89,29 @@ This video demonstrates the *Simple**FOC**library* basic usage, electronic conne
    - PlatformIO
 - **Open-Source**: Full code and documentation available on github
 - **Goal**: 
-   - Support as many [sensor](https://docs.simplefoc.com/position_sensors) + [motor](https://docs.simplefoc.com/motors) + [driver](https://docs.simplefoc.com/drivers) + [current sense](https://docs.simplefoc.com/current_sense)   combination as possible.
-   - Provide the up-to-date and in-depth documentation with API references and the examples
+   - Support as many [sensor](https://docs.simplefoc.com/position_sensors) + [motor](https://docs.simplefoc.com/motors) + [driver](https://docs.simplefoc.com/drivers) + [current sense](https://docs.simplefoc.com/current_sense) combinations as possible
+   - Make transitioning from one hardware combination to another as seamless as possible
+   - Provide up-to-date and in-depth documentation with API references and examples
 - **Easy to setup and configure**: 
    - Easy hardware configuration 
    - Each hardware component is a C++ object (easy to understand) 
    - Easy [tuning the control loops](https://docs.simplefoc.com/motion_control)
-   - [*Simple**FOC**Studio*](https://docs.simplefoc.com/studio) configuration GUI tool
-   - Built-in communication and monitoring
+   - Advanced control features: velocity and current feed-forward, improved velocity calculation
+   - [*Simple**FOC**Studio*](https://docs.simplefoc.com/studio) configuration GUI tool for real-time tuning and monitoring
+   - Built-in communication and monitoring via Serial, I2C, or custom protocols
 - **Cross-platform**:
    - Seamless code transfer from one microcontroller family to another 
    - Supports multiple [MCU architectures](https://docs.simplefoc.com/microcontrollers):
-      - Arduino: UNO R4, UNO, MEGA, DUE, Leonardo, Nano, Nano33 ....
-      - STM32
-      - ESP32
-      - Teensy
+      - Arduino: UNO R4, UNO, MEGA, DUE, Leonardo, Nano, Nano33, MKR ....
+      - STM32 (Nucleo, Bluepill, B-G431B-ESC1, H7 family, etc.)
+      - ESP32 (ESP32, ESP32-S2, ESP32-S3, ESP32-C3, ESP32-C6)
+      - Teensy (3.x, 4.x)
+      - RP2040/RP2350 (Raspberry Pi Pico)
+      - SAMD (Arduino Zero, MKR boards)
+      - MBED (Portenta, Nano 33 BLE)
+      - Silabs
       - many more ...
 
-<p align=""> <img src="https://docs.simplefoc.com/extras/Images/uno_l6234.jpg"  height="170px">  <img src="https://docs.simplefoc.com/extras/Images/hmbgc_v22.jpg" height="170px">  <img src="https://docs.simplefoc.com/extras/Images/foc_shield_v13.jpg"  height="170px"></p>
 
 
 ## Documentation

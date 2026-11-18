@@ -46,7 +46,7 @@ void setup() {
   // limiting motor movements
   // limit the voltage to be set to the motor
   // start very low for high resistance motors
-  // currnet = resistance*voltage, so try to be well under 1Amp
+  // currnet = voltage/resistance, so try to be well under 1Amp
   motor.voltage_limit = 3;   // [V]
   // limit/set the velocity of the transition in between 
   // target angles
@@ -71,6 +71,9 @@ void setup() {
 }
 
 void loop() {
+  //torque control 
+  // should be called as frequently as possible
+  motor.loopFOC();
   // open  loop angle movements
   // using motor.voltage_limit and motor.velocity_limit
   // angles can be positive or negative, negative angles correspond to opposite motor direction
