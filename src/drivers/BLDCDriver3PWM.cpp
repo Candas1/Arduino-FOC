@@ -79,11 +79,16 @@ void BLDCDriver3PWM::setPwm(float Ua, float Ub, float Uc) {
   // limit the voltage in driver, and to the supply voltage so that the duty cycle stays in [0,1]
   // (same result as limiting the voltage then the duty cycle, with one division instead of three)
   float u_max = voltage_limit < voltage_power_supply ? voltage_limit : voltage_power_supply;
-  float inv_supply = 1.0f / voltage_power_supply;
-  // calculate duty cycle
-  dc_a = _constrain(Ua, 0.0f, u_max) * inv_supply;
-  dc_b = _constrain(Ub, 0.0f, u_max) * inv_supply;
-  dc_c = _constrain(Uc, 0.0f, u_max) * inv_supply;
+  if (u_max > 0.0f) {
+    // calculate duty cycle
+    float inv_supply = 1.0f / voltage_power_supply;
+    dc_a = _constrain(Ua, 0.0f, u_max) * inv_supply;
+    dc_b = _constrain(Ub, 0.0f, u_max) * inv_supply;
+    dc_c = _constrain(Uc, 0.0f, u_max) * inv_supply;
+  } else {
+    // voltage_limit or voltage_power_supply not set, zero or negative (or NaN): no voltage
+    dc_a = dc_b = dc_c = 0.0f;
+  }
 
   // hardware specific writing
   // hardware specific function - depending on driver and mcu
