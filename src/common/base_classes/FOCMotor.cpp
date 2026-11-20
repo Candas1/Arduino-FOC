@@ -664,6 +664,7 @@ void FOCMotor::loopFOC() {
           voltage.q = PID_current_q.compute(current_sp - current.q, dt);
           voltage.d = PID_current_d.compute(feed_forward_current.d - current.d, dt);
         } else {
+          // first loop or long pause: the filters and controllers apply their own dt checks (as before)
           current.q = LPF_current_q(current.q);
           current.d = LPF_current_d(current.d);
           voltage.q = PID_current_q(current_sp - current.q);
