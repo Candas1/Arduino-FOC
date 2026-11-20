@@ -40,7 +40,9 @@ float PIDController::operator() (float error){
     if(_isset(limit)) integral = _constrain(integral, -limit, limit);
     // Discrete derivation
     // u_dk = D(ek - ek_1)/Ts
-    float derivative = D*(error - error_prev)/dt;
+    // (skipped when D is 0, the usual case: saves a division per call on MCUs without FPU)
+    float derivative = 0.0f;
+    if (D != 0.0f) derivative = D*(error - error_prev)/dt;
 
     // sum all the components
     float output = proportional + integral + derivative;
