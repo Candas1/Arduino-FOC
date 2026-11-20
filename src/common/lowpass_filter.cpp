@@ -27,10 +27,11 @@ float LowPassFilter::operator() (float x)
         }
         timestamp_prev = timestamp;
     }
-    return (*this)(x, dt);
+    return filter(x, dt);
 }
 
-float LowPassFilter::operator() (float x, float dt)
+// filter computation with a given elapsed time dt [s]
+float LowPassFilter::filter(float x, float dt)
 {
     // calculate the first order filer
     float alpha = Tf/(Tf + dt);

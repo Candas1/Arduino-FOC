@@ -659,10 +659,10 @@ void FOCMotor::loopFOC() {
         // one elapsed time for the 2 filters and the 2 controllers (time since the previous loopFOC)
         float dt = last_loopfoc_time_us * 1e-6f;
         if (dt > 0.0f && dt < 0.3f) {
-          current.q = LPF_current_q(current.q, dt);
-          current.d = LPF_current_d(current.d, dt);
-          voltage.q = PID_current_q(current_sp - current.q, dt);
-          voltage.d = PID_current_d(feed_forward_current.d - current.d, dt);
+          current.q = LPF_current_q.filter(current.q, dt);
+          current.d = LPF_current_d.filter(current.d, dt);
+          voltage.q = PID_current_q.compute(current_sp - current.q, dt);
+          voltage.d = PID_current_d.compute(feed_forward_current.d - current.d, dt);
         } else {
           current.q = LPF_current_q(current.q);
           current.d = LPF_current_d(current.d);
