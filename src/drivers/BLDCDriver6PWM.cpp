@@ -78,15 +78,20 @@ int BLDCDriver6PWM::init() {
 
 // Set voltage to the pwm pin
 void BLDCDriver6PWM::setPwm(float Ua, float Ub, float Uc) {
-  // limit the voltage in driver
-  Ua = _constrain(Ua, 0, voltage_limit);
-  Ub = _constrain(Ub, 0, voltage_limit);
-  Uc = _constrain(Uc, 0, voltage_limit);
-  // calculate duty cycle
-  // limited in [0,1]
-  dc_a = _constrain(Ua / voltage_power_supply, 0.0f , 1.0f );
-  dc_b = _constrain(Ub / voltage_power_supply, 0.0f , 1.0f );
-  dc_c = _constrain(Uc / voltage_power_supply, 0.0f , 1.0f );
+  // limit the voltage in driver, and to the supply voltage so that the duty cycle stays in [0,1]
+  // (same limits as before: voltage then duty cycle, with one division instead of three)
+  float u_max = voltage_limit < voltage_power_supply ? voltage_limit : voltage_power_supply;
+  float inv_supply = 1.0f / voltage_power_supply;
+  // (inv_supply is infinite when voltage_power_supply is so small, below ~3e-39, that 1 / it overflows)
+  if (u_max > 0.0f && inv_supply < INFINITY) {
+    // calculate duty cycle
+    dc_a = _constrain(Ua, 0.0f, u_max) * inv_supply;
+    dc_b = _constrain(Ub, 0.0f, u_max) * inv_supply;
+    dc_c = _constrain(Uc, 0.0f, u_max) * inv_supply;
+  } else {
+    // voltage_limit or voltage_power_supply not set, zero, negative, NaN or too small: no voltage
+    dc_a = dc_b = dc_c = 0.0f;
+  }
   // hardware specific writing
   // hardware specific function - depending on driver and mcu
   _writeDutyCycle6PWM(dc_a, dc_b, dc_c, phase_state, params);
