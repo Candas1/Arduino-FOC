@@ -79,7 +79,7 @@ int BLDCDriver6PWM::init() {
 // Set voltage to the pwm pin
 void BLDCDriver6PWM::setPwm(float Ua, float Ub, float Uc) {
   // limit the voltage in driver, and to the supply voltage so that the duty cycle stays in [0,1]
-  // (same result as limiting the voltage then the duty cycle, with one division instead of three)
+  // (same limits as before: voltage then duty cycle, with one division instead of three)
   float u_max = voltage_limit < voltage_power_supply ? voltage_limit : voltage_power_supply;
   if (u_max > 0.0f) {
     // calculate duty cycle
