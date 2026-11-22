@@ -54,10 +54,6 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
 	
   // Set ADC to scan mode
 	adc_special_function_config(ADC_SCAN_MODE, ENABLE);
-  // No continuous mode (as the STM32 current sense): the first analogRead of the core enables it. With it,
-  // _readRegularADCVoltage (1.5 cycle sampling) converted continuously and the first injected channel was no
-  // longer updated (phase A current frozen, GD32F130 split board); analogRead (7.5 cycles) was not affected.
-  adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
 
   // Disable the temperature sensor, Vrefint and vbat channel
 	//adc_tempsensor_vrefint_disable();
@@ -148,10 +144,18 @@ float _readRegularADCVoltage(const int pin){
     adc_calibration_enable();
   }
 
-  // one regular channel, single conversion started by software (the injected group keeps its timer trigger).
-  // Continuous mode off again: a first analogRead after the current sense init may have enabled it
-  // (see _configureADCLowSide)
-  adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
+  // Single conversion. The first analogRead of the core turns the continuous mode on, and analogRead relies on it
+  // (with it off, two pins read alternately with analogRead returned each other's value). With it on, our 1.5 cycle
+  // conversions ran back to back and the first injected channel was no longer updated (phase A current frozen).
+  // So it is turned off for our conversion and put back as it was. A conversion of analogRead still running ends
+  // within 1.7 us (7.5 cycles at 12 MHz): wait for it before starting ours.
+  bool continuous = ADC_CTL1 & ADC_CTL1_CTN;
+  if (continuous) {
+    adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
+    delayMicroseconds(2);
+  }
+
+  // one regular channel, started by software (the injected group keeps its timer trigger)
   adc_channel_length_config(ADC_REGULAR_CHANNEL, 1);
   adc_external_trigger_source_config(ADC_REGULAR_CHANNEL, ADC_EXTTRIG_REGULAR_NONE);
   adc_external_trigger_config(ADC_REGULAR_CHANNEL, ENABLE);
@@ -161,19 +165,21 @@ float _readRegularADCVoltage(const int pin){
   // every PWM period), together with EOIC: waiting for EOC alone returned the previous regular result most of the
   // time (measured). An EOC without EOIC is the end of our regular conversion. With EOIC, an injected group ended
   // in between: start the conversion again. A regular conversion takes ~1.2 us at 12 MHz: 20 us per try, 1 ms in all.
+  float voltage = -1.0f;
   unsigned long start = _micros();
-  while (_micros() - start < 1000) {
+  while (voltage < 0 && _micros() - start < 1000) {
     adc_flag_clear(ADC_FLAG_EOC | ADC_FLAG_EOIC);
     adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
     unsigned long try_start = _micros();
     uint32_t stat = ADC_STAT;
     while (!(stat & ADC_FLAG_EOC) && _micros() - try_start < 20) stat = ADC_STAT;
     if ((stat & ADC_FLAG_EOC) && !(stat & ADC_FLAG_EOIC)) {
-      return adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
+      voltage = adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
     }
   }
-  SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
-  return -1.0f;
+  if (continuous) adc_special_function_config(ADC_CONTINUOUS_MODE, ENABLE);
+  if (voltage < 0) SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
+  return voltage;
 }
 
 
