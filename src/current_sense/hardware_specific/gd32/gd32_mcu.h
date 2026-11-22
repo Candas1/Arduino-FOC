@@ -26,6 +26,9 @@ typedef struct GD32CurrentSenseParams {
  *
  * Same conversion as the core's analogRead (12 bit, blocking, a few us), on the ADC of the low side current
  * sense: the injected conversions of the currents have priority and are not changed.
+ * As with analogRead, a few reads return the value of the previously read pin while the motor runs
+ * (0.02-0.05 % measured, two pins read alternately): filter the value or wait for several reads before acting
+ * on it (e.g. an under/overvoltage cut).
  *
  * Unlike STM32: make a first read (this function or analogRead, any pin) BEFORE currentSense.init().
  * The core configures and calibrates the ADC at its first read; after the current sense init it would

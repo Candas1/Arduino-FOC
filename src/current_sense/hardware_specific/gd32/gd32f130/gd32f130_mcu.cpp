@@ -113,7 +113,8 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
 
 // Regular conversion through the core's analogRead path (get_adc_value: 12 bit, without the analogRead resolution):
 // measured on the GD32F130 split board, motor running, with the current sense ADC: injected currents not changed,
-// two pins read alternately give their own value. It relies on the continuous mode set by the core's first
+// two pins read alternately give their own value
+// (except 0.02-0.05 % of the reads with the motor running, as with analogRead). It relies on the continuous mode set by the core's first
 // analogRead: our own single conversions waited for EOC, which the end of the injected group also sets, and
 // returned the previous result; with the continuous mode on, 1.5 cycle conversions froze the first injected channel.
 float _readRegularADCVoltage(const int pin){
