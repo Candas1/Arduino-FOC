@@ -14,22 +14,20 @@
 #define _SOFTWARE_6PWM 0
 #define _ERROR_6PWM -1
 
-#define RCU_TIMER_BLDC RCU_TIMER0
+// 6PWM needs complementary outputs: on the GD32F1x0 only the advanced timer TIMER0 has them.
+// The channels and the alternate functions are taken from the pins (PinMap_PWM of the variant).
 #define TIMER_BLDC TIMER0
-#define DEAD_TIME 60
+#define RCU_TIMER_BLDC RCU_TIMER0
 
-// Channel G
-#define TIMER_BLDC_CHANNEL_G TIMER_CH_2
-// Channel B
-#define TIMER_BLDC_CHANNEL_B TIMER_CH_1
-// Channel Y
-#define TIMER_BLDC_CHANNEL_Y TIMER_CH_0
-// Channel for Sampling Point
+// Channel for Sampling Point (the channel without complementary output, not used by the phases)
 #define TIMER_BLDC_CHANNEL_S TIMER_CH_3
 #define SAMPLING_POINT 0.98 // The closer to 1 the closer to the middle of LOW side ON time. Don't use 1, it will overlap with the update event and not trigger
 
-// Break input
+// Break input (TIMER0_BRKIN, alternate function 2), active low.
+// Can be changed with a build flag, or disabled with -D TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN=NOT_SET
+#ifndef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
 #define TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN PB12
+#endif
 
 typedef struct GD32DriverParams {
   uint32_t timers[6] = {NULL};

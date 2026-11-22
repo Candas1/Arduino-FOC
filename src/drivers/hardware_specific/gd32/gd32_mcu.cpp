@@ -5,71 +5,87 @@
 
 // GD32 Arduino core only: must stay inside the guard, the other platforms don't have it
 #include "gd32/PinNames.h"
-
-  /*
-  uint32_t timerAh,timerAl,timerBh,timerBl,timerCl,timerCh;
-  uint8_t channelAh,channelAl,channelBh,channelBl,channelCh,channelCl;
-  uint8_t chonah,chonal,chonbh,chonbl,chonch,choncl;
-  */
+#include "gd32/PeripheralPins.h"
 
   float sampling_point = SAMPLING_POINT;
+
+// Entry of PinMap_PWM (variant PeripheralPins.c) for this pin on this timer, NULL if there is none.
+// A pin can have several timer functions (PB15: TIMER14_CH1 on AF1, TIMER0_CH2_ON on AF2, TIMER14_CH0_ON on AF3):
+// the pinmap functions of the core return the first one, so the table is searched for the wanted timer.
+const PinMap* _findTimerPin(int pin, uint32_t timer){
+  PinName pin_name = DIGITAL_TO_PINNAME(pin);
+  for (const PinMap* map = PinMap_PWM; map->pin != NC; map++) {
+    if (map->pin == pin_name && (uint32_t)map->peripheral == timer) return map;
+  }
+  return NULL;
+}
+
+// Dead time register value (DTCFG, bits 7:0 of TIMERx_CCHP) for a dead time in timer clock cycles (CKDIV = 1):
+//   DTCFG = 0xxxxxxx: DTCFG[6:0] cycles             (0 to 127)
+//           10xxxxxx: (64 + DTCFG[5:0]) x 2 cycles  (128 to 254)
+//           110xxxxx: (32 + DTCFG[4:0]) x 8 cycles  (256 to 504)
+//           111xxxxx: (32 + DTCFG[4:0]) x 16 cycles (512 to 1008)
+// Rounded down to the step of the range, as __LL_TIM_CALC_DEADTIME does for STM32. Longer: the maximum (1008 cycles).
+uint8_t _deadTimeRegister(uint32_t cycles){
+  if (cycles < 128) return cycles;
+  if (cycles < 256) return 0x80 | (cycles / 2 - 64);
+  if (cycles < 512) return 0xC0 | (cycles / 8 - 32);
+  if (cycles < 1024) return 0xE0 | (cycles / 16 - 32);
+  return 0xFF;
+}
 
 void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, const int pinA_l, const int pinB_h, const int pinB_l, const int pinC_h, const int pinC_l){
   if( !pwm_frequency || !_isset(pwm_frequency) ) pwm_frequency = _PWM_FREQUENCY; // default frequency 16khz
   else pwm_frequency = _constrain(pwm_frequency, 0, _PWM_FREQUENCY_MAX); // constrain to 50kHz max
+
+  // dead time: dead_zone is a fraction of the PWM period, as for the other platforms (STM32),
+  // in cycles of TIMER0, which runs at SystemCoreClock (APB2 not divided), as for the period below
+  // (rounded: 0.01f * 72 MHz / 16 kHz gives 44.99999 in float)
+  uint32_t dead_time_cycles = _round(dead_zone * SystemCoreClock / pwm_frequency);
+
   // center-aligned frequency is uses two periods
   pwm_frequency *=2;
 
-  // timeout timer parameter structs
-  timer_parameter_struct timeoutTimer_paramter_struct;
-
   // PWM timer Parameter structs
-  timer_parameter_struct timerBldc_parameter_struct;	
+  timer_parameter_struct timerBldc_parameter_struct;
   timer_break_parameter_struct timerBldc_break_parameter_struct;
   timer_oc_parameter_struct timerBldc_oc_parameter_struct;
 
-  pin_function(DIGITAL_TO_PINNAME(pinA_h), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  pin_function(DIGITAL_TO_PINNAME(pinA_l), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  pin_function(DIGITAL_TO_PINNAME(pinB_h), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  pin_function(DIGITAL_TO_PINNAME(pinB_l), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  pin_function(DIGITAL_TO_PINNAME(pinC_h), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  pin_function(DIGITAL_TO_PINNAME(pinC_l), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
+  // timer functions of the pins: high side and low side of a phase on the same channel of TIMER0,
+  // one channel per phase
+  const int pins[6] = { pinA_h, pinA_l, pinB_h, pinB_l, pinC_h, pinC_l };
+  const PinMap* maps[6];
+  for (int i = 0; i < 6; i++) {
+    maps[i] = _findTimerPin(pins[i], TIMER_BLDC);
+    if (maps[i] == NULL) {
+      SIMPLEFOC_DEBUG("GD32-DRV: ERR: pin not on TIMER0: ", pins[i]);
+      return SIMPLEFOC_DRIVER_INIT_FAILED;
+    }
+  }
+  uint16_t channelA = GD_PIN_CHANNEL_GET(maps[0]->function);
+  uint16_t channelB = GD_PIN_CHANNEL_GET(maps[2]->function);
+  uint16_t channelC = GD_PIN_CHANNEL_GET(maps[4]->function);
+  if (GD_PIN_CHANNEL_GET(maps[1]->function) != channelA
+      || GD_PIN_CHANNEL_GET(maps[3]->function) != channelB
+      || GD_PIN_CHANNEL_GET(maps[5]->function) != channelC
+      || channelA == channelB || channelA == channelC || channelB == channelC) {
+    SIMPLEFOC_DEBUG("GD32-DRV: ERR: high and low side pins of a phase must share a channel, one channel per phase");
+    return SIMPLEFOC_DRIVER_INIT_FAILED;
+  }
 
-  /*
-  timerAh = pinmap_peripheral(DIGITAL_TO_PINNAME(pinA_h), PinMap_PWM);
-  channelAh = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinA_h), PinMap_PWM));
-  chonah = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinA_h), PinMap_PWM));
-  timerAl = pinmap_peripheral(DIGITAL_TO_PINNAME(pinA_l), PinMap_PWM);
-  channelAl = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinA_l), PinMap_PWM));
-  chonal = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinA_l), PinMap_PWM));
-  timerBh = pinmap_peripheral(DIGITAL_TO_PINNAME(pinB_h), PinMap_PWM);
-  chonbh = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinB_h), PinMap_PWM));
-  channelBh = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinB_h), PinMap_PWM));
-  timerBl = pinmap_peripheral(DIGITAL_TO_PINNAME(pinB_l), PinMap_PWM);
-  chonbl = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinB_l), PinMap_PWM));
-  channelBl = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinB_l), PinMap_PWM));
-  timerCh = pinmap_peripheral(DIGITAL_TO_PINNAME(pinC_h), PinMap_PWM);
-  chonch = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinC_h), PinMap_PWM));
-  channelCh = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinC_h), PinMap_PWM));
-  timerCl = pinmap_peripheral(DIGITAL_TO_PINNAME(pinC_l), PinMap_PWM);
-  choncl = GD_PIN_CHON_GET(pinmap_function(DIGITAL_TO_PINNAME(pinC_l), PinMap_PWM));
-  channelCl = GD_PIN_CHANNEL_GET(pinmap_function(DIGITAL_TO_PINNAME(pinC_l), PinMap_PWM));
-  */
+  // alternate function of each pin from PinMap_PWM, mode and speed as before.
+  // The AF index is in bits 15:18 only: GD_PIN_AF_GET masks 8 bits and also returns the channel (bits 19:23),
+  // e.g. 34 instead of 2 for CH2, which pin_function would use as an index out of GD_GPIO_AF[] (that wrote a
+  // wrong AF on PA13/PA14 and disabled SWD).
+  for (int i = 0; i < 6; i++) {
+    uint32_t af = (maps[i]->function >> PIN_AF_SHIFT) & 0x0F;
+    pin_function(maps[i]->pin, GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, af));
+  }
 
-  //SIMPLEFOC_DEBUG("STM32-DRV: ERR: too many pins used");
-  //return (GD32DriverParams*)SIMPLEFOC_DRIVER_INIT_FAILED;
-  
-
-  #ifdef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
+  if (_isset(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN)) {
     pin_function(DIGITAL_TO_PINNAME(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  #endif
+  }
 
-  // dead time is set in nanoseconds
-  uint32_t dead_time_ns = (float)(1e9f/pwm_frequency)*dead_zone;
-
-  // #todo this needs to be converted
-  // uint32_t dead_time = __LL_TIM_CALC_DEADTIME(SystemCoreClock, LL_TIM_GetClockDivision(HT->getHandle()->Instance), dead_time_ns);
-  
   // Enable timer clock
   rcu_periph_clock_enable(RCU_TIMER_BLDC);
 
@@ -104,34 +120,16 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
     timerBldc_oc_parameter_struct.ocnidlestate 	= TIMER_OCN_IDLE_STATE_HIGH;
   #endif
 
-  // Configure all three output channels with the output channel parameter struct
-  timer_channel_output_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_G, &timerBldc_oc_parameter_struct);
-  timer_channel_output_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_B, &timerBldc_oc_parameter_struct);
-  timer_channel_output_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_Y, &timerBldc_oc_parameter_struct);
-  timer_channel_output_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, &timerBldc_oc_parameter_struct);
-  
-  // Set output channel PWM type to PWM0
-  timer_channel_output_mode_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_G, TIMER_OC_MODE_PWM0);
-  timer_channel_output_mode_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_B, TIMER_OC_MODE_PWM0);
-  timer_channel_output_mode_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_Y, TIMER_OC_MODE_PWM0);
-  timer_channel_output_mode_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, TIMER_OC_MODE_PWM0);
-
-  // Deactivate output channel fastmode
-  timer_channel_output_fast_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_G, TIMER_OC_FAST_DISABLE);
-  timer_channel_output_fast_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_B, TIMER_OC_FAST_DISABLE);
-  timer_channel_output_fast_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_Y, TIMER_OC_FAST_DISABLE);
-  timer_channel_output_fast_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, TIMER_OC_FAST_DISABLE);
-
-  // Deactivate output channel shadow function
-  timer_channel_output_shadow_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_G, TIMER_OC_SHADOW_ENABLE);
-  timer_channel_output_shadow_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_B, TIMER_OC_SHADOW_ENABLE);
-  timer_channel_output_shadow_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_Y, TIMER_OC_SHADOW_ENABLE);
-  timer_channel_output_shadow_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, TIMER_OC_SHADOW_ENABLE);
-
-  // Initialize pulse length with value 0 (pulse duty factor = zero)
-  timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_G, 0);
-  timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_B, 0);
-  timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_Y, 0);
+  // Configure the three phase channels and the sampling channel: PWM0, no fast mode, shadow register,
+  // pulse length 0 for the phases (duty cycle zero)
+  const uint16_t channels[4] = { channelA, channelB, channelC, TIMER_BLDC_CHANNEL_S };
+  for (int i = 0; i < 4; i++) {
+    timer_channel_output_config(TIMER_BLDC, channels[i], &timerBldc_oc_parameter_struct);
+    timer_channel_output_mode_config(TIMER_BLDC, channels[i], TIMER_OC_MODE_PWM0);
+    timer_channel_output_fast_config(TIMER_BLDC, channels[i], TIMER_OC_FAST_DISABLE);
+    timer_channel_output_shadow_config(TIMER_BLDC, channels[i], TIMER_OC_SHADOW_ENABLE);
+    timer_channel_output_pulse_value_config(TIMER_BLDC, channels[i], 0);
+  }
   timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, SystemCoreClock/pwm_frequency * sampling_point);
 
   // Set up the break parameter struct
@@ -139,13 +137,13 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
   timerBldc_break_parameter_struct.runoffstate      = TIMER_ROS_STATE_ENABLE;
   timerBldc_break_parameter_struct.ideloffstate     = TIMER_IOS_STATE_DISABLE;
   timerBldc_break_parameter_struct.protectmode	    = TIMER_CCHP_PROT_OFF;
-  timerBldc_break_parameter_struct.deadtime 	      = DEAD_TIME; // 0~255
+  timerBldc_break_parameter_struct.deadtime 	      = _deadTimeRegister(dead_time_cycles);
   timerBldc_break_parameter_struct.outputautostate 	= TIMER_OUTAUTO_DISABLE;
-  
-  #ifdef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
+
+  if (_isset(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN)) {
     timerBldc_break_parameter_struct.breakstate	      = TIMER_BREAK_ENABLE;
     timerBldc_break_parameter_struct.breakpolarity	  = TIMER_BREAK_POLARITY_LOW;
-  #endif
+  }
 
   // Configure the timer with the break parameter struct
   timer_break_config(TIMER_BLDC, &timerBldc_break_parameter_struct);
@@ -158,7 +156,7 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 
   GD32DriverParams* params = new GD32DriverParams {
     .timers = { TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC },
-    .channels = { TIMER_BLDC_CHANNEL_G, TIMER_BLDC_CHANNEL_G, TIMER_BLDC_CHANNEL_B, TIMER_BLDC_CHANNEL_B, TIMER_BLDC_CHANNEL_Y, TIMER_BLDC_CHANNEL_Y },
+    .channels = { channelA, channelA, channelB, channelB, channelC, channelC },
     .pwm_frequency  = pwm_frequency,
     .range          = SystemCoreClock/pwm_frequency,
     .dead_zone      = dead_zone,
