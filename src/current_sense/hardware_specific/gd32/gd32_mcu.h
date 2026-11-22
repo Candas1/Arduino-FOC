@@ -18,7 +18,7 @@ typedef struct GD32CurrentSenseParams {
 } GD32CurrentSenseParams;
 
 //#define ADC_USE_INTERRUPT         // If defined, will use the End of conversion interrupt of inserted ADC
-#define PHASE_CURRENT_FILTER 0.10 // Used with the interrupt. If 1.00, no filter
+#define PHASE_CURRENT_FILTER 0.10 // Used with the interrupt. If 1.00, no filter 
 
 /**
  * Read a regular ADC channel (bus voltage, temperature, potentiometer...) while the injected channels
