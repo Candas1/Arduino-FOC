@@ -2,6 +2,7 @@
 
 #if defined(GD32F1x0) 
 #include "../../../../common/foc_utils.h"
+#include "../../../../common/time_utils.h"
 #include "../../../../drivers/hardware_api.h"
 #include "../../../../drivers/hardware_specific/gd32/gd32_mcu.h"
 #include "../../../hardware_api.h"
@@ -108,6 +109,54 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
       #endif
   } 
   return 0;
+}
+
+
+// last pin read by _readRegularADCVoltage and its ADC channel (the pin is configured once)
+int last_regular_pin = NOT_SET;
+uint8_t last_regular_channel = 0;
+
+float _readRegularADCVoltage(const int pin){
+  if (pin != last_regular_pin) {
+    PinName pin_name = DIGITAL_TO_PINNAME(pin);
+    if (!pin_in_pinmap(pin_name, PinMap_ADC)) {
+      SIMPLEFOC_DEBUG("GD32-CS: ERR: not an ADC pin: ", pin);
+      return -1.0f;
+    }
+    // analog mode with pinMode: does not go through the pinmap AF of the core (see GD_PIN_AF_GET)
+    pinMode(pin, INPUT_ANALOG);
+    last_regular_channel = get_adc_channel(pin_name);
+    last_regular_pin = pin;
+  }
+
+  // ADC not enabled yet by the current sense: same clock as _configureADCLowSide, then calibration
+  if (!(ADC_CTL1 & ADC_CTL1_ADCON)) {
+    rcu_periph_clock_enable(RCU_ADC);
+    rcu_adc_clock_config(RCU_ADCCK_APB2_DIV6);
+    adc_data_alignment_config(ADC_DATAALIGN_RIGHT);
+    adc_enable();
+    delay(1U);
+    adc_calibration_enable();
+  }
+
+  // one regular channel, started by software (the injected group keeps its timer trigger)
+  adc_channel_length_config(ADC_REGULAR_CHANNEL, 1);
+  adc_external_trigger_source_config(ADC_REGULAR_CHANNEL, ADC_EXTTRIG_REGULAR_NONE);
+  adc_external_trigger_config(ADC_REGULAR_CHANNEL, ENABLE);
+  adc_regular_channel_config(0, last_regular_channel, SAMPLING_TIME);
+
+  adc_flag_clear(ADC_FLAG_EOC);
+  adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
+  // a regular conversion takes ~1.2 us at 12 MHz, plus the injected ones that interrupt it: 1 ms timeout
+  unsigned long start = _micros();
+  while (!adc_flag_get(ADC_FLAG_EOC)) {
+    if (_micros() - start > 1000) {
+      SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
+      return -1.0f;
+    }
+  }
+  adc_flag_clear(ADC_FLAG_EOC);
+  return adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
 }
 
 
