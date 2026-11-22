@@ -121,6 +121,11 @@ int last_regular_pin = NOT_SET;
 uint8_t last_regular_channel = 0;
 
 float _readRegularADCVoltage(const int pin){
+#ifdef ADC_USE_INTERRUPT
+  // the interrupt clears EOIC, which tells the end of the injected group from the end of the regular conversion
+  SIMPLEFOC_DEBUG("GD32-CS: ERR: _readRegularADCVoltage not available with ADC_USE_INTERRUPT");
+  return -1.0f;
+#endif
   if (pin != last_regular_pin) {
     PinName pin_name = DIGITAL_TO_PINNAME(pin);
     if (!pin_in_pinmap(pin_name, PinMap_ADC)) {
@@ -152,18 +157,23 @@ float _readRegularADCVoltage(const int pin){
   adc_external_trigger_config(ADC_REGULAR_CHANNEL, ENABLE);
   adc_regular_channel_config(0, last_regular_channel, SAMPLING_TIME);
 
-  adc_flag_clear(ADC_FLAG_EOC);
-  adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
-  // a regular conversion takes ~1.2 us at 12 MHz, plus the injected ones that interrupt it: 1 ms timeout
+  // EOC is set at the end of the regular conversion, but also at the end of the injected group (the currents,
+  // every PWM period), together with EOIC: waiting for EOC alone returned the previous regular result most of the
+  // time (measured). An EOC without EOIC is the end of our regular conversion. With EOIC, an injected group ended
+  // in between: start the conversion again. A regular conversion takes ~1.2 us at 12 MHz: 20 us per try, 1 ms in all.
   unsigned long start = _micros();
-  while (!adc_flag_get(ADC_FLAG_EOC)) {
-    if (_micros() - start > 1000) {
-      SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
-      return -1.0f;
+  while (_micros() - start < 1000) {
+    adc_flag_clear(ADC_FLAG_EOC | ADC_FLAG_EOIC);
+    adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
+    unsigned long try_start = _micros();
+    uint32_t stat = ADC_STAT;
+    while (!(stat & ADC_FLAG_EOC) && _micros() - try_start < 20) stat = ADC_STAT;
+    if ((stat & ADC_FLAG_EOC) && !(stat & ADC_FLAG_EOIC)) {
+      return adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
     }
   }
-  adc_flag_clear(ADC_FLAG_EOC);
-  return adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
+  SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
+  return -1.0f;
 }
 
 
