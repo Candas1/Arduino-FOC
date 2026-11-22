@@ -73,9 +73,13 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
     return SIMPLEFOC_DRIVER_INIT_FAILED;
   }
 
-  // alternate function of each pin from PinMap_PWM, mode and speed as before
+  // alternate function of each pin from PinMap_PWM, mode and speed as before.
+  // The AF index is in bits 15:18 only: GD_PIN_AF_GET masks 8 bits and also returns the channel (bits 19:23),
+  // e.g. 34 instead of 2 for CH2, which pin_function would use as an index out of GD_GPIO_AF[] (that wrote a
+  // wrong AF on PA13/PA14 and disabled SWD).
   for (int i = 0; i < 6; i++) {
-    pin_function(maps[i]->pin, GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, GD_PIN_AF_GET(maps[i]->function)));
+    uint32_t af = (maps[i]->function >> PIN_AF_SHIFT) & 0x0F;
+    pin_function(maps[i]->pin, GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, af));
   }
 
   if (_isset(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN)) {
