@@ -54,6 +54,10 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
 	
   // Set ADC to scan mode
 	adc_special_function_config(ADC_SCAN_MODE, ENABLE);
+  // No continuous mode: the first analogRead of the core enables it, then any later regular conversion
+  // (analogRead, _readRegularADCVoltage) runs continuously and the first injected channel stops being updated
+  // (phase A current frozen, measured on the GD32F130 split board)
+  adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
 
   // Disable the temperature sensor, Vrefint and vbat channel
 	//adc_tempsensor_vrefint_disable();
@@ -139,7 +143,9 @@ float _readRegularADCVoltage(const int pin){
     adc_calibration_enable();
   }
 
-  // one regular channel, started by software (the injected group keeps its timer trigger)
+  // one regular channel, single conversion started by software (the injected group keeps its timer trigger).
+  // Continuous mode off again: an analogRead called before may have enabled it (see _configureADCLowSide)
+  adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
   adc_channel_length_config(ADC_REGULAR_CHANNEL, 1);
   adc_external_trigger_source_config(ADC_REGULAR_CHANNEL, ADC_EXTTRIG_REGULAR_NONE);
   adc_external_trigger_config(ADC_REGULAR_CHANNEL, ENABLE);
