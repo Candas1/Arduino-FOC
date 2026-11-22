@@ -38,12 +38,12 @@ float PIDController::operator() (float error){
     float integral = integral_prev + I*dt*0.5f*(error + error_prev);
     // antiwindup - limit the output
     if(_isset(limit)) integral = _constrain(integral, -limit, limit);
+    // sum all the components
+    float output = proportional + integral;
     // Discrete derivation
     // u_dk = D(ek - ek_1)/Ts
-    float derivative = D*(error - error_prev)/dt;
-
-    // sum all the components
-    float output = proportional + integral + derivative;
+    // (skipped when D is 0, the usual case: saves a division per call on MCUs without FPU)
+    if (D != 0.0f) output += D*(error - error_prev)/dt;
     // antiwindup - limit the output variable
     if(_isset(limit)) output = _constrain(output, -limit, limit);
 
