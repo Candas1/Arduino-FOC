@@ -2,7 +2,6 @@
 
 #if defined(GD32F1x0) 
 #include "../../../../common/foc_utils.h"
-#include "../../../../common/time_utils.h"
 #include "../../../../drivers/hardware_api.h"
 #include "../../../../drivers/hardware_specific/gd32/gd32_mcu.h"
 #include "../../../hardware_api.h"
@@ -112,74 +111,19 @@ float _readADCVoltageLowSide(const int pin, const void* cs_params){
 }
 
 
-// last pin read by _readRegularADCVoltage and its ADC channel (the pin is configured once)
-int last_regular_pin = NOT_SET;
-uint8_t last_regular_channel = 0;
-
+// Regular conversion through the core's analogRead path (get_adc_value: 12 bit, without the analogRead resolution):
+// measured on the GD32F130 split board, motor running, with the current sense ADC: injected currents not changed,
+// two pins read alternately give their own value. It relies on the continuous mode set by the core's first
+// analogRead: our own single conversions waited for EOC, which the end of the injected group also sets, and
+// returned the previous result; with the continuous mode on, 1.5 cycle conversions froze the first injected channel.
 float _readRegularADCVoltage(const int pin){
-#ifdef ADC_USE_INTERRUPT
-  // the interrupt clears EOIC, which tells the end of the injected group from the end of the regular conversion
-  SIMPLEFOC_DEBUG("GD32-CS: ERR: _readRegularADCVoltage not available with ADC_USE_INTERRUPT");
-  return -1.0f;
-#endif
-  if (pin != last_regular_pin) {
-    PinName pin_name = DIGITAL_TO_PINNAME(pin);
-    if (!pin_in_pinmap(pin_name, PinMap_ADC)) {
-      SIMPLEFOC_DEBUG("GD32-CS: ERR: not an ADC pin: ", pin);
-      return -1.0f;
-    }
-    // analog mode with pinMode: does not go through the pinmap AF of the core (see GD_PIN_AF_GET)
-    pinMode(pin, INPUT_ANALOG);
-    last_regular_channel = get_adc_channel(pin_name);
-    last_regular_pin = pin;
+  PinName pin_name = DIGITAL_TO_PINNAME(pin);
+  if (!pin_in_pinmap(pin_name, PinMap_ADC)) {
+    SIMPLEFOC_DEBUG("GD32-CS: ERR: not an ADC pin: ", pin);
+    return -1.0f;
   }
-
-  // ADC not enabled yet by the current sense: same clock as _configureADCLowSide, then calibration
-  if (!(ADC_CTL1 & ADC_CTL1_ADCON)) {
-    rcu_periph_clock_enable(RCU_ADC);
-    rcu_adc_clock_config(RCU_ADCCK_APB2_DIV6);
-    adc_data_alignment_config(ADC_DATAALIGN_RIGHT);
-    adc_enable();
-    delay(1U);
-    adc_calibration_enable();
-  }
-
-  // Single conversion. The first analogRead of the core turns the continuous mode on, and analogRead relies on it
-  // (with it off, two pins read alternately with analogRead returned each other's value). With it on, our 1.5 cycle
-  // conversions ran back to back and the first injected channel was no longer updated (phase A current frozen).
-  // So it is turned off for our conversion and put back as it was. A conversion of analogRead still running ends
-  // within 1.7 us (7.5 cycles at 12 MHz): wait for it before starting ours.
-  bool continuous = ADC_CTL1 & ADC_CTL1_CTN;
-  if (continuous) {
-    adc_special_function_config(ADC_CONTINUOUS_MODE, DISABLE);
-    delayMicroseconds(2);
-  }
-
-  // one regular channel, started by software (the injected group keeps its timer trigger)
-  adc_channel_length_config(ADC_REGULAR_CHANNEL, 1);
-  adc_external_trigger_source_config(ADC_REGULAR_CHANNEL, ADC_EXTTRIG_REGULAR_NONE);
-  adc_external_trigger_config(ADC_REGULAR_CHANNEL, ENABLE);
-  adc_regular_channel_config(0, last_regular_channel, SAMPLING_TIME);
-
-  // EOC is set at the end of the regular conversion, but also at the end of the injected group (the currents,
-  // every PWM period), together with EOIC: waiting for EOC alone returned the previous regular result most of the
-  // time (measured). An EOC without EOIC is the end of our regular conversion. With EOIC, an injected group ended
-  // in between: start the conversion again. A regular conversion takes ~1.2 us at 12 MHz: 20 us per try, 1 ms in all.
-  float voltage = -1.0f;
-  unsigned long start = _micros();
-  while (voltage < 0 && _micros() - start < 1000) {
-    adc_flag_clear(ADC_FLAG_EOC | ADC_FLAG_EOIC);
-    adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
-    unsigned long try_start = _micros();
-    uint32_t stat = ADC_STAT;
-    while (!(stat & ADC_FLAG_EOC) && _micros() - try_start < 20) stat = ADC_STAT;
-    if ((stat & ADC_FLAG_EOC) && !(stat & ADC_FLAG_EOIC)) {
-      voltage = adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
-    }
-  }
-  if (continuous) adc_special_function_config(ADC_CONTINUOUS_MODE, ENABLE);
-  if (voltage < 0) SIMPLEFOC_DEBUG("GD32-CS: ERR: regular conversion timeout");
-  return voltage;
+  pinMode(pin, INPUT_ANALOG);
+  return get_adc_value(pin_name) * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
 }
 
 

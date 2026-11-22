@@ -24,13 +24,19 @@ typedef struct GD32CurrentSenseParams {
  * Read a regular ADC channel (bus voltage, temperature, potentiometer...) while the injected channels
  * measure the phase currents, as _readRegularADCVoltage on STM32.
  *
- * One-shot regular conversion started by software on the ADC of the low side current sense. Injected
- * conversions have hardware priority: the current sensing is not changed, the reading can wait for them.
- * The ADC is initialised if the current sense has not done it yet.
- * Slower than the injected reading (a few us, blocking) but does not reconfigure the ADC like analogRead.
+ * Same conversion as the core's analogRead (12 bit, blocking, a few us), on the ADC of the low side current
+ * sense: the injected conversions of the currents have priority and are not changed.
+ *
+ * Unlike STM32: make a first read (this function or analogRead, any pin) BEFORE currentSense.init().
+ * The core configures and calibrates the ADC at its first read; after the current sense init it would
+ * calibrate it again while the currents are measured.
+ *
+ * ArduinoCore-GD32 bug, also with analogRead: at this first read, the core writes a wrong alternate function
+ * on the pins that follow the read pin in the same AFSEL register (e.g. PA5-PA7 for PA4), because GD_PIN_AF_GET
+ * also returns the ADC channel. No effect if those pins are not used as alternate function (timer, SPI, UART...).
  *
  * @param pin - the Arduino pin to read (ADC pin)
- * @return float - the voltage read on the pin, or -1.0f on error (not an ADC pin, timeout)
+ * @return float - the voltage read on the pin, or -1.0f if the pin is not an ADC pin
  */
 float _readRegularADCVoltage(const int pin);
 
