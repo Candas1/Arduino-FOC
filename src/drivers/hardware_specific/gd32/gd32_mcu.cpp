@@ -38,10 +38,10 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
   if( !pwm_frequency || !_isset(pwm_frequency) ) pwm_frequency = _PWM_FREQUENCY; // default frequency 16khz
   else pwm_frequency = _constrain(pwm_frequency, 0, _PWM_FREQUENCY_MAX); // constrain to 50kHz max
 
-  // dead time: dead_zone is a fraction of the PWM period, as for the other platforms (STM32)
-  uint32_t dead_time_ns = (float)(1e9f/pwm_frequency)*dead_zone;
-  // TIMER0 runs at SystemCoreClock (APB2 not divided), as for the period below
-  uint32_t dead_time_cycles = (uint64_t)dead_time_ns * SystemCoreClock / 1000000000UL;
+  // dead time: dead_zone is a fraction of the PWM period, as for the other platforms (STM32),
+  // in cycles of TIMER0, which runs at SystemCoreClock (APB2 not divided), as for the period below
+  // (rounded: 0.01f * 72 MHz / 16 kHz gives 44.99999 in float)
+  uint32_t dead_time_cycles = _round(dead_zone * SystemCoreClock / pwm_frequency);
 
   // center-aligned frequency is uses two periods
   pwm_frequency *=2;
