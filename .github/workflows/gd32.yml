@@ -21,6 +21,9 @@ jobs:
           python-version: "3.12"
       - name: Install PlatformIO Core
         run: pip install --upgrade platformio
+      # pio ci checks the board before installing the platform: install it first
+      - name: Install platform-gd32
+        run: pio pkg install --global --platform "$PLATFORM"
 
       # GD32F1x0: hardware specific 6PWM and low side current sense
       - name: PIO Run GD32F130 split board

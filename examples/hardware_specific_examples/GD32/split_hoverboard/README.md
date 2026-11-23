@@ -36,13 +36,12 @@ build_flags = -D SIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false
 lib_deps = askuric/Simple FOC
 ```
 
-Arduino IDE: add `https://raw.githubusercontent.com/CommunityGD32Cores/GD32Core-New/main/package_gd32_index.json` to the
-boards manager, install "GigaDevice GD32", select "GD32F1x0 Generic series" and "GD32F130C8 (Generic)". The build flag
-goes in a `platform.local.txt` next to the `platform.txt` of the core:
-
-```
-compiler.cpp.extra_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false
-```
+Arduino IDE: the boards manager package of the core
+(`https://raw.githubusercontent.com/CommunityGD32Cores/GD32Core-New/main/package_gd32_index.json`) currently has no
+archive checksum and recent Arduino IDE / arduino-cli versions refuse to install it: use PlatformIO. With a manual
+install of the core, the build flag goes in a `platform.local.txt` next to its `platform.txt`
+(`compiler.cpp.extra_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false`), board "GD32F1x0 Generic series",
+"GD32F130C8 (Generic)".
 
 Upload with an ST-Link on the SWD connector of the board (SWDIO, SWCLK, GND).
 
