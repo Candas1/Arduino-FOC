@@ -130,7 +130,7 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
     timer_channel_output_shadow_config(TIMER_BLDC, channels[i], TIMER_OC_SHADOW_ENABLE);
     timer_channel_output_pulse_value_config(TIMER_BLDC, channels[i], 0);
   }
-  timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, SystemCoreClock/pwm_frequency * sampling_point);
+  timer_channel_output_pulse_value_config(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, SystemCoreClock/pwm_frequency * gd32_timer_sampling_point);
 
   // Set up the break parameter struct
   timer_break_struct_para_init(&timerBldc_break_parameter_struct);
