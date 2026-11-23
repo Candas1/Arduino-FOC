@@ -85,6 +85,12 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
 
 // since SimpleFOC 2.3.4 it returns the current sense params (or SIMPLEFOC_CURRENT_SENSE_INIT_FAILED)
 void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
+  GD32DriverParams* driver_params = (GD32DriverParams*)_driver_params;
+
+  // the ADC is triggered by TIMER0 CH3, which only the GD32 6PWM driver configures
+  // (params: 0 if driver.init() was not called, SIMPLEFOC_DRIVER_INIT_FAILED if it failed)
+  if (driver_params == nullptr || driver_params == SIMPLEFOC_DRIVER_INIT_FAILED
+      || driver_params->interface_type != _HARDWARE_6PWM) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
 
   // Start T0CH3 for current sampling
   timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,ENABLE);
