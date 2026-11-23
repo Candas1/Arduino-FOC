@@ -1,4 +1,5 @@
 name: GD32
+# Compile test of the GD32 support (ArduinoCore-GD32 core), like stm32.yml / esp32.yml for their cores.
 # The Arduino IDE package of ArduinoCore-GD32 has no archive checksum (arduino-cli refuses it): built with PlatformIO
 on: [push, pull_request]
 
@@ -25,7 +26,8 @@ jobs:
       - name: Install platform-gd32
         run: pio pkg install --global --platform "$PLATFORM"
 
-      # GD32F1x0: hardware specific 6PWM and low side current sense
+      # GD32F1x0: the only family with hardware specific code (6PWM, low side current sense).
+      # Builds the split board example, which uses both.
       - name: PIO Run GD32F130 split board
         run: >
           pio ci --lib="." --board=genericGD32F130C8
@@ -34,8 +36,12 @@ jobs:
         env:
           PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
 
-      # other GD32 families: no hardware specific code, the generic functions must still link
-      - name: PIO Run GD32F303 (generic functions)
+      # Other GD32 families (F10x, F30x, E23x...): the GD32 code above is only for the GD32F1x0
+      # (#if defined(GD32F1x0) in src/drivers and src/current_sense hardware_specific/gd32). On the other families
+      # it must be left out and SimpleFOC must still build with its generic functions, as it did before the GD32
+      # driver existed. This step checks that guard on a GD32F303, so a change of the GD32 code cannot break the
+      # build for the users of the other GD32 families.
+      - name: PIO Run GD32F303 (other GD32 families, generic functions)
         run: >
           pio ci --lib="." --board=genericGD32F303CC
           --project-option="platform=$PLATFORM" --project-option="framework=arduino" --project-option="platform_packages=$CORE"
