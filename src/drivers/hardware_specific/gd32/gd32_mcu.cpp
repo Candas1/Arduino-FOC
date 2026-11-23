@@ -91,7 +91,8 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 
   // Initial deinitialize of the timer
   timer_deinit(TIMER_BLDC);
-  //dbg_periph_enable(DBG_TIMER0_HOLD); // Hold counter of timer 0 during debug
+  // The PWM keeps running when the debugger halts the core. To stop the timer counter instead:
+  // dbg_periph_enable(DBG_TIMER0_HOLD) in the sketch after driver.init()
  
   // Set up the basic parameter struct for the timer
   timer_struct_para_init(&timerBldc_parameter_struct);
@@ -227,15 +228,12 @@ void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_s
     case _HARDWARE_6PWM:
       // phase a
       _setSinglePhaseState(phase_state[0], ((GD32DriverParams*)params)->timers[0], ((GD32DriverParams*)params)->channels[0], ((GD32DriverParams*)params)->channels[1]);
-      //if(phase_state[0] == PhaseState::PHASE_OFF) dc_a = 0.0f;
       _setPwm(((GD32DriverParams*)params)->timers[0], ((GD32DriverParams*)params)->channels[0], ((GD32DriverParams*)params)->range*dc_a, _PWM_RESOLUTION);
       // phase b
       _setSinglePhaseState(phase_state[1], ((GD32DriverParams*)params)->timers[2], ((GD32DriverParams*)params)->channels[2], ((GD32DriverParams*)params)->channels[3]);
-      //if(phase_state[1] == PhaseState::PHASE_OFF) dc_b = 0.0f;
       _setPwm(((GD32DriverParams*)params)->timers[2], ((GD32DriverParams*)params)->channels[2], ((GD32DriverParams*)params)->range*dc_b, _PWM_RESOLUTION);
       // phase c
       _setSinglePhaseState(phase_state[2], ((GD32DriverParams*)params)->timers[4], ((GD32DriverParams*)params)->channels[4], ((GD32DriverParams*)params)->channels[5]);
-      //if(phase_state[2] == PhaseState::PHASE_OFF) dc_c = 0.0f;
       _setPwm(((GD32DriverParams*)params)->timers[4], ((GD32DriverParams*)params)->channels[4], ((GD32DriverParams*)params)->range*dc_c, _PWM_RESOLUTION);
       
       // Update sampling point
