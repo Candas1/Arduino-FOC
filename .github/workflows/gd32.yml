@@ -29,7 +29,7 @@ jobs:
       - name: PIO Run GD32F130 split board
         run: >
           pio ci --lib="." --board=genericGD32F130C8
-          --project-option="platform=$PLATFORM" --project-option="platform_packages=$CORE"
+          --project-option="platform=$PLATFORM" --project-option="framework=arduino" --project-option="platform_packages=$CORE"
           --project-option="build_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false"
         env:
           PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
@@ -38,7 +38,7 @@ jobs:
       - name: PIO Run GD32F303 (generic functions)
         run: >
           pio ci --lib="." --board=genericGD32F303CC
-          --project-option="platform=$PLATFORM" --project-option="platform_packages=$CORE"
+          --project-option="platform=$PLATFORM" --project-option="framework=arduino" --project-option="platform_packages=$CORE"
           --project-option="build_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false"
         env:
           PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
