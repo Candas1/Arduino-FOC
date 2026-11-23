@@ -42,7 +42,7 @@ extern float gd32_timer_sampling_point;
 // A low level on this pin turns all the PWM outputs off in hardware (clears POEN, the primary output enable).
 
 typedef struct GD32DriverParams {
-  uint32_t timers[6] = {NULL};
+  uint32_t timers[6] = {0};
   uint32_t channels[6];
   long pwm_frequency;
   long unsigned int range;

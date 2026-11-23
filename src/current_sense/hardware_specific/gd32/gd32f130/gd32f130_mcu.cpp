@@ -93,13 +93,14 @@ void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
 }
 
 // function reading an ADC value and returning the read voltage
-float _readADCVoltageLowSide(const int pin, const void* cs_params){
+float _readADCVoltageLowSide(const int pin, const void* _cs_params){
+  const GD32CurrentSenseParams* cs_params = (const GD32CurrentSenseParams*)_cs_params;
   for(int i=0; i < 3; i++){
-    if( pin == ((GD32CurrentSenseParams*)cs_params)->pins[i]) // found in the buffer
+    if( pin == cs_params->pins[i]) // found in the buffer
       #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
-      return adc_val[i] * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return adc_val[i] * cs_params->adc_voltage_conv;
       #else
-      return adc_inserted_data_read(i) * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return adc_inserted_data_read(i) * cs_params->adc_voltage_conv;
       #endif
   } 
   return 0;
