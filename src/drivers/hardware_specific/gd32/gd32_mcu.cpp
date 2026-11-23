@@ -7,12 +7,12 @@
 #include "gd32/PinNames.h"
 #include "gd32/PeripheralPins.h"
 
-  float sampling_point = SAMPLING_POINT;
+float gd32_timer_sampling_point = SAMPLING_POINT;
 
 // Entry of PinMap_PWM (variant PeripheralPins.c) for this pin on this timer, NULL if there is none.
 // A pin can have several timer functions (PB15: TIMER14_CH1 on AF1, TIMER0_CH2_ON on AF2, TIMER14_CH0_ON on AF3):
 // the pinmap functions of the core return the first one, so the table is searched for the wanted timer.
-const PinMap* _findTimerPin(int pin, uint32_t timer){
+static const PinMap* _findTimerPin(int pin, uint32_t timer){
   PinName pin_name = DIGITAL_TO_PINNAME(pin);
   for (const PinMap* map = PinMap_PWM; map->pin != NC; map++) {
     if (map->pin == pin_name && (uint32_t)map->peripheral == timer) return map;
@@ -26,7 +26,7 @@ const PinMap* _findTimerPin(int pin, uint32_t timer){
 //           110xxxxx: (32 + DTCFG[4:0]) x 8 cycles  (256 to 504)
 //           111xxxxx: (32 + DTCFG[4:0]) x 16 cycles (512 to 1008)
 // Rounded down to the step of the range, as __LL_TIM_CALC_DEADTIME does for STM32. Longer: the maximum (1008 cycles).
-uint8_t _deadTimeRegister(uint32_t cycles){
+static uint8_t _deadTimeRegister(uint32_t cycles){
   if (cycles < 128) return cycles;
   if (cycles < 256) return 0x80 | (cycles / 2 - 64);
   if (cycles < 512) return 0xC0 | (cycles / 8 - 32);
@@ -167,13 +167,13 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 }
 
 // setting pwm to hardware pin - instead analogWrite()
-void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value, int resolution)
+static void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value, int resolution)
 {  
   timer_channel_output_pulse_value_config(timer_periph,channel,value);
 }
 
 
-uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
+static uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
 {
   switch (channel)
   {
@@ -199,7 +199,7 @@ uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
   }
 }
 
-void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t channel1, uint16_t channel2)
+static void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t channel1, uint16_t channel2)
 {
   _UNUSED(channel2);
   switch (state) {
@@ -239,7 +239,7 @@ void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_s
       _setPwm(((GD32DriverParams*)params)->timers[4], ((GD32DriverParams*)params)->channels[4], ((GD32DriverParams*)params)->range*dc_c, _PWM_RESOLUTION);
       
       // Update sampling point
-      _setPwm(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, ((GD32DriverParams*)params)->range*sampling_point, _PWM_RESOLUTION);
+      _setPwm(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, ((GD32DriverParams*)params)->range*gd32_timer_sampling_point, _PWM_RESOLUTION);
       break;
   }
   _UNUSED(phase_state);
