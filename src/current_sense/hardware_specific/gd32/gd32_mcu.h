@@ -15,8 +15,9 @@ typedef struct GD32CurrentSenseParams {
   float adc_voltage_conv;
 } GD32CurrentSenseParams;
 
-//#define ADC_USE_INTERRUPT         // If defined, will use the End of conversion interrupt of inserted ADC
-#define PHASE_CURRENT_FILTER 0.10 // Used with the interrupt. If 1.00, no filter 
+// Build flag -D SIMPLEFOC_GD32_ADC_INTERRUPT (as SIMPLEFOC_STM32_ADC_INTERRUPT on STM32): the end of the
+// injected conversions raises an interrupt that stores the phase current values, and _readADCVoltageLowSide
+// returns the stored values. Without it (default), _readADCVoltageLowSide reads the ADC data registers.
 
 /**
  * Read a regular ADC channel (bus voltage, temperature, potentiometer...) while the injected channels
