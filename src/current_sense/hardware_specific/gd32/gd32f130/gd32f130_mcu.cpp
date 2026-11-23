@@ -13,8 +13,10 @@
 #define _ADC_RESOLUTION_F1 4096.0f
 #define SAMPLING_TIME ADC_SAMPLETIME_1POINT5
 
-// array of values of 4 injected channels per adc instance (3)
-uint32_t adc_val[4]={0};
+#ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
+// values of the 3 injected channels, stored by the ADC interrupt
+static volatile uint32_t adc_val[3] = {0};
+#endif
 
 void* _configureADCLowSide(const void* driver_params, const int pinA, const int pinB, const int pinC){
 
@@ -59,7 +61,7 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
 	adc_external_trigger_source_config(ADC_INSERTED_CHANNEL, ADC_EXTTRIG_INSERTED_T0_CH3);
 	
 
-  #ifdef ADC_USE_INTERRUPT
+  #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
   /* clear the ADC Interrupt flag */
   adc_interrupt_flag_clear(ADC_INT_EOIC);
 
@@ -94,7 +96,7 @@ void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
 float _readADCVoltageLowSide(const int pin, const void* cs_params){
   for(int i=0; i < 3; i++){
     if( pin == ((GD32CurrentSenseParams*)cs_params)->pins[i]) // found in the buffer
-      #ifdef ADC_USE_INTERRUPT
+      #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
       return adc_val[i] * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
       #else
       return adc_inserted_data_read(i) * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
@@ -121,16 +123,14 @@ float _readRegularADCVoltage(const int pin){
 }
 
 
-#ifdef ADC_USE_INTERRUPT
-extern "C" {  
+#ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
+extern "C" {
   void ADC_CMP_IRQHandler(void){
     if ( adc_interrupt_flag_get(ADC_INT_EOIC) != RESET){
-      //GPIO_BOP(GPIOB) = (uint32_t)GPIO_PIN_7; // Turning output ON for measurements on the oscilloscope
       adc_interrupt_flag_clear(ADC_INT_EOIC);
-      adc_val[0] = (1 - PHASE_CURRENT_FILTER) * adc_val[0] + PHASE_CURRENT_FILTER * adc_inserted_data_read(ADC_INSERTED_CHANNEL_0);
-      adc_val[1] = (1 - PHASE_CURRENT_FILTER) * adc_val[1] + PHASE_CURRENT_FILTER * adc_inserted_data_read(ADC_INSERTED_CHANNEL_1);
-      adc_val[2] = (1 - PHASE_CURRENT_FILTER) * adc_val[2] + PHASE_CURRENT_FILTER * adc_inserted_data_read(ADC_INSERTED_CHANNEL_2);
-      //GPIO_BC(GPIOB) = (uint32_t)GPIO_PIN_7; // Turning output OFF for measurements on the oscilloscope
+      adc_val[0] = adc_inserted_data_read(ADC_INSERTED_CHANNEL_0);
+      adc_val[1] = adc_inserted_data_read(ADC_INSERTED_CHANNEL_1);
+      adc_val[2] = adc_inserted_data_read(ADC_INSERTED_CHANNEL_2);
     }
   }
 }
