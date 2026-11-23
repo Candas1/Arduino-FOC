@@ -1,34 +1,41 @@
 name: GD32
+# The Arduino IDE package of ArduinoCore-GD32 has no archive checksum (arduino-cli refuses it): built with PlatformIO
 on: [push, pull_request]
+
 jobs:
   build:
-    name: Test compiling
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        arduino-boards-fqbn:
-          - GD32Community:gd32:gd_generic_gd32f1x0:pnum=GD32F130C8_GENERIC   # gd32f130 - hoverboard split board
-
-        include:
-          - arduino-boards-fqbn: GD32Community:gd32:gd_generic_gd32f1x0:pnum=GD32F130C8_GENERIC # hoverboard split board
-            platform-url: https://raw.githubusercontent.com/CommunityGD32Cores/GD32Core-New/main/package_gd32_index.json
-            sketch-names: gd32_split_hoverboard.ino
-            build-properties:
-              gd32_split_hoverboard:
-                -DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false
-
-      # Do not cancel all jobs / architectures if one job fails
-      fail-fast: false
+    env:
+      PLATFORM: https://github.com/CommunityGD32Cores/platform-gd32.git
+      CORE: framework-arduinogd32@https://github.com/CommunityGD32Cores/ArduinoCore-GD32.git
     steps:
-    - name: Checkout
-      uses: actions/checkout@master
-    - name: Compile all examples
-      uses: ArminJo/arduino-test-compile@master
-      with:
-          arduino-board-fqbn: ${{ matrix.arduino-boards-fqbn }}
-          required-libraries: ${{ matrix.required-libraries }}
-          platform-url: ${{ matrix.platform-url }}
-          sketch-names: ${{ matrix.sketch-names }}
-          sketches-exclude: ${{ matrix.sketches-exclude }}
-          build-properties: ${{ toJson(matrix.build-properties) }}
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.platformio/.cache
+          key: ${{ runner.os }}-pio-gd32
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install PlatformIO Core
+        run: pip install --upgrade platformio
+
+      # GD32F1x0: hardware specific 6PWM and low side current sense
+      - name: PIO Run GD32F130 split board
+        run: >
+          pio ci --lib="." --board=genericGD32F130C8
+          --project-option="platform=$PLATFORM" --project-option="platform_packages=$CORE"
+          --project-option="build_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false"
+        env:
+          PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
+
+      # other GD32 families: no hardware specific code, the generic functions must still link
+      - name: PIO Run GD32F303 (generic functions)
+        run: >
+          pio ci --lib="." --board=genericGD32F303CC
+          --project-option="platform=$PLATFORM" --project-option="platform_packages=$CORE"
+          --project-option="build_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false"
+        env:
+          PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
