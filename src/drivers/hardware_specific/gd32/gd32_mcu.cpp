@@ -82,9 +82,9 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
     pin_function(maps[i]->pin, GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, af));
   }
 
-  if (_isset(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN)) {
+  #ifdef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
     pin_function(DIGITAL_TO_PINNAME(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN), GD_PIN_FUNCTION3(PIN_MODE_AF, PIN_OTYPE_PP, 2));
-  }
+  #endif
 
   // Enable timer clock
   rcu_periph_clock_enable(RCU_TIMER_BLDC);
@@ -140,10 +140,10 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
   timerBldc_break_parameter_struct.deadtime 	      = _deadTimeRegister(dead_time_cycles);
   timerBldc_break_parameter_struct.outputautostate 	= TIMER_OUTAUTO_DISABLE;
 
-  if (_isset(TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN)) {
+  #ifdef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
     timerBldc_break_parameter_struct.breakstate	      = TIMER_BREAK_ENABLE;
     timerBldc_break_parameter_struct.breakpolarity	  = TIMER_BREAK_POLARITY_LOW;
-  }
+  #endif
 
   // Configure the timer with the break parameter struct
   timer_break_config(TIMER_BLDC, &timerBldc_break_parameter_struct);

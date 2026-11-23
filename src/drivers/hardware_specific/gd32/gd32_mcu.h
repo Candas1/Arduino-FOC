@@ -32,9 +32,6 @@
 // To enable it, give the pin of TIMER0_BRKIN (alternate function 2 on the GD32F1x0), active low:
 //   -D TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN=PB12   (hoverboard split boards)
 // A low level on this pin turns all the PWM outputs off in hardware (clears POEN, the primary output enable).
-#ifndef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
-#define TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN NOT_SET
-#endif
 
 typedef struct GD32DriverParams {
   uint32_t timers[6] = {NULL};
