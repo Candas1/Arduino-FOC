@@ -85,21 +85,28 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
 
 // since SimpleFOC 2.3.4 it returns the current sense params (or SIMPLEFOC_CURRENT_SENSE_INIT_FAILED)
 void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
+  GD32DriverParams* driver_params = (GD32DriverParams*)_driver_params;
+
+  // the ADC is triggered by TIMER0 CH3, which only the GD32 6PWM driver configures
+  // (params: 0 if driver.init() was not called, SIMPLEFOC_DRIVER_INIT_FAILED if it failed)
+  if (driver_params == nullptr || driver_params == SIMPLEFOC_DRIVER_INIT_FAILED
+      || driver_params->interface_type != _HARDWARE_6PWM) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
 
   // Start T0CH3 for current sampling
-  timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,ENABLE);
+  timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,TIMER_CCX_ENABLE);
 
   return _cs_params;
 }
 
 // function reading an ADC value and returning the read voltage
-float _readADCVoltageLowSide(const int pin, const void* cs_params){
+float _readADCVoltageLowSide(const int pin, const void* _cs_params){
+  const GD32CurrentSenseParams* cs_params = (const GD32CurrentSenseParams*)_cs_params;
   for(int i=0; i < 3; i++){
-    if( pin == ((GD32CurrentSenseParams*)cs_params)->pins[i]) // found in the buffer
+    if( pin == cs_params->pins[i]) // found in the buffer
       #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
-      return adc_val[i] * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return adc_val[i] * cs_params->adc_voltage_conv;
       #else
-      return adc_inserted_data_read(i) * ((GD32CurrentSenseParams*)cs_params)->adc_voltage_conv;
+      return adc_inserted_data_read(i) * cs_params->adc_voltage_conv;
       #endif
   } 
   return 0;

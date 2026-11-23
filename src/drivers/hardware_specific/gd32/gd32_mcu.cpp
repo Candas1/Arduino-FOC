@@ -43,7 +43,7 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
   // (rounded: 0.01f * 72 MHz / 16 kHz gives 44.99999 in float)
   uint32_t dead_time_cycles = _round(dead_zone * SystemCoreClock / pwm_frequency);
 
-  // center-aligned frequency is uses two periods
+  // center-aligned mode: one PWM period is two counter periods
   pwm_frequency *=2;
 
   // PWM timer Parameter structs
@@ -168,7 +168,7 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 }
 
 // setting pwm to hardware pin - instead analogWrite()
-static void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value, int resolution)
+static void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value)
 {  
   timer_channel_output_pulse_value_config(timer_periph,channel,value);
 }
@@ -181,41 +181,35 @@ static uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
   /* configure TIMER_CH_0 */
   case TIMER_CH_0:
     return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH0EN);
-    break;
   /* configure TIMER_CH_1 */
   case TIMER_CH_1:
     return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH1EN);
-    break;
   /* configure TIMER_CH_2 */
   case TIMER_CH_2:
     return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH2EN);
-    break;
   /* configure TIMER_CH_3 */
   case TIMER_CH_3:
     return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH3EN);
-    break;
   default:
     return 0xFFFF;    // should never get here. Added to avoid compile warning
-    break;
   }
 }
 
-static void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t channel1, uint16_t channel2)
+static void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t channel)
 {
-  _UNUSED(channel2);
   switch (state) {
     case PhaseState::PHASE_OFF:
-      if (_isChannelEnabled(timer_periph, channel1) != 0) // disable timer channel only if enabled to avoid glitches
+      if (_isChannelEnabled(timer_periph, channel) != 0) // disable timer channel only if enabled to avoid glitches
       {
-        timer_channel_output_state_config(timer_periph,channel1,TIMER_CCX_DISABLE);
-        timer_channel_complementary_output_state_config(timer_periph,channel1,TIMER_CCXN_DISABLE);
+        timer_channel_output_state_config(timer_periph,channel,TIMER_CCX_DISABLE);
+        timer_channel_complementary_output_state_config(timer_periph,channel,TIMER_CCXN_DISABLE);
       }
       break;
     default:
-      if (_isChannelEnabled(timer_periph, channel1) == 0) // enable timer channel only if disabled to avoid glitches
+      if (_isChannelEnabled(timer_periph, channel) == 0) // enable timer channel only if disabled to avoid glitches
       {
-        timer_channel_output_state_config(timer_periph,channel1,TIMER_CCX_ENABLE);
-        timer_channel_complementary_output_state_config(timer_periph,channel1,TIMER_CCXN_ENABLE);
+        timer_channel_output_state_config(timer_periph,channel,TIMER_CCX_ENABLE);
+        timer_channel_complementary_output_state_config(timer_periph,channel,TIMER_CCXN_ENABLE);
       }
       break;
   }
@@ -224,23 +218,23 @@ static void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16
 // - BLDC driver - 6PWM setting
 // - hardware specific
 void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_state, void* params){
-  switch(((GD32DriverParams*)params)->interface_type){
+  GD32DriverParams* driver_params = (GD32DriverParams*)params;
+  switch(driver_params->interface_type){
     case _HARDWARE_6PWM:
       // phase a
-      _setSinglePhaseState(phase_state[0], ((GD32DriverParams*)params)->timers[0], ((GD32DriverParams*)params)->channels[0], ((GD32DriverParams*)params)->channels[1]);
-      _setPwm(((GD32DriverParams*)params)->timers[0], ((GD32DriverParams*)params)->channels[0], ((GD32DriverParams*)params)->range*dc_a, _PWM_RESOLUTION);
+      _setSinglePhaseState(phase_state[0], driver_params->timers[0], driver_params->channels[0]);
+      _setPwm(driver_params->timers[0], driver_params->channels[0], driver_params->range*dc_a);
       // phase b
-      _setSinglePhaseState(phase_state[1], ((GD32DriverParams*)params)->timers[2], ((GD32DriverParams*)params)->channels[2], ((GD32DriverParams*)params)->channels[3]);
-      _setPwm(((GD32DriverParams*)params)->timers[2], ((GD32DriverParams*)params)->channels[2], ((GD32DriverParams*)params)->range*dc_b, _PWM_RESOLUTION);
+      _setSinglePhaseState(phase_state[1], driver_params->timers[2], driver_params->channels[2]);
+      _setPwm(driver_params->timers[2], driver_params->channels[2], driver_params->range*dc_b);
       // phase c
-      _setSinglePhaseState(phase_state[2], ((GD32DriverParams*)params)->timers[4], ((GD32DriverParams*)params)->channels[4], ((GD32DriverParams*)params)->channels[5]);
-      _setPwm(((GD32DriverParams*)params)->timers[4], ((GD32DriverParams*)params)->channels[4], ((GD32DriverParams*)params)->range*dc_c, _PWM_RESOLUTION);
-      
+      _setSinglePhaseState(phase_state[2], driver_params->timers[4], driver_params->channels[4]);
+      _setPwm(driver_params->timers[4], driver_params->channels[4], driver_params->range*dc_c);
+
       // Update sampling point
-      _setPwm(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, ((GD32DriverParams*)params)->range*gd32_timer_sampling_point, _PWM_RESOLUTION);
+      _setPwm(TIMER_BLDC, TIMER_BLDC_CHANNEL_S, driver_params->range*gd32_timer_sampling_point);
       break;
   }
-  _UNUSED(phase_state);
 }
 
 
