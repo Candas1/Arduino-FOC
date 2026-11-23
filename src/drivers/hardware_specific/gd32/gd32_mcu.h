@@ -23,6 +23,11 @@
 #define TIMER_BLDC_CHANNEL_S TIMER_CH_3
 #define SAMPLING_POINT 0.98 // The closer to 1 the closer to the middle of LOW side ON time. Don't use 1, it will overlap with the update event and not trigger
 
+// ADC trigger instant (TIMER_BLDC_CHANNEL_S), fraction of the PWM period, SAMPLING_POINT at start-up.
+// Written to the timer at every _writeDutyCycle6PWM: it can be changed while the motor runs,
+// from the sketch or by a debugger (e.g. to find where the low side MOSFETs are on long enough).
+extern float gd32_timer_sampling_point;
+
 // Polarity of the gate driver inputs: build flags read by all the drivers (drivers/hardware_api.h), default true.
 // For drivers with active low inputs, e.g. the low side of the hoverboard split boards:
 //   -D SIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false   (and/or SIMPLEFOC_PWM_HIGHSIDE_ACTIVE_HIGH=false)
