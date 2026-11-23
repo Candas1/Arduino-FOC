@@ -204,7 +204,7 @@ void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t chan
   _UNUSED(channel2);
   switch (state) {
     case PhaseState::PHASE_OFF:
-      if (_isChannelEnabled(timer_periph, channel1) != 1) // disable timer channel only if enabled to avoid glitches
+      if (_isChannelEnabled(timer_periph, channel1) != 0) // disable timer channel only if enabled to avoid glitches
       {
         timer_channel_output_state_config(timer_periph,channel1,TIMER_CCX_DISABLE);
         timer_channel_complementary_output_state_config(timer_periph,channel1,TIMER_CCXN_DISABLE);
