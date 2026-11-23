@@ -1,7 +1,7 @@
 #include "../../hardware_api.h"
 #include "gd32_mcu.h"
 
-#if defined(_GD32_DEF_)
+#if defined(_GD32_DEF_) && defined(GD32F1x0)  // see gd32_mcu.h
 
 // GD32 Arduino core only: must stay inside the guard, the other platforms don't have it
 #include "gd32/PinNames.h"

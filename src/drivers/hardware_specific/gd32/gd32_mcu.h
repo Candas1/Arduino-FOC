@@ -2,7 +2,10 @@
 #define GD32_DRIVER_MCU_DEF
 #include "../../hardware_api.h"
 
-#if defined(_GD32_DEF_)   // Declared in ArduinoCore-GD32/cores/arduino/gd32/gd32_def.h
+// _GD32_DEF_: declared in ArduinoCore-GD32/cores/arduino/gd32/gd32_def.h; GD32F1x0: build flag of the board.
+// Only the GD32F1x0 is supported (pin modes, timers and ADC differ on the other families). On the other GD32
+// families, the generic functions of SimpleFOC are used: 6PWM fails at driver.init() (SIMPLEFOC_DRIVER_INIT_FAILED).
+#if defined(_GD32_DEF_) && defined(GD32F1x0)
 
 // default pwm parameters
 #define _PWM_RESOLUTION 12 // 12bit

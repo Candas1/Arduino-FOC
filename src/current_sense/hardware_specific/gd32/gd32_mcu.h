@@ -4,7 +4,10 @@
 #include "../../hardware_api.h"
 #include "../../../common/foc_utils.h"
 
-#if defined(_GD32_DEF_) 
+// Only the GD32F1x0 is supported (gd32f130/gd32f130_mcu.cpp). On the other GD32 families, the generic functions
+// of SimpleFOC are used: the low side current sense fails at currentSense.init(), and _readRegularADCVoltage
+// is not declared.
+#if defined(_GD32_DEF_) && defined(GD32F1x0)
 
 // generic implementation of the hardware specific structure
 // containing all the necessary current sense parameters
