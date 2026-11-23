@@ -1,6 +1,6 @@
 #include "../../../hardware_api.h"
 
-#if defined(GD32F1x0) 
+#if defined(GD32F1x0)
 #include "../../../../common/foc_utils.h"
 #include "../../../../drivers/hardware_api.h"
 #include "../../../../drivers/hardware_specific/gd32/gd32_mcu.h"
@@ -34,32 +34,31 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
     pinMode(pinB,INPUT_ANALOG);
     cs_params->pins[cnt++] = pinB;
   }
-  if(_isset(pinC)){ 
+  if(_isset(pinC)){
     pinMode(pinC,INPUT_ANALOG);
     cs_params->pins[cnt] = pinC;
   }
 
   // Enable ADC and DMA clock
-	rcu_periph_clock_enable(RCU_ADC);
-	
+  rcu_periph_clock_enable(RCU_ADC);
+
   // Configure ADC clock (APB2 clock is DIV1 -> 72MHz, ADC clock is DIV6 -> 12MHz)
-	rcu_adc_clock_config(RCU_ADCCK_APB2_DIV6);
-	
+  rcu_adc_clock_config(RCU_ADCCK_APB2_DIV6);
+
   adc_channel_length_config(ADC_INSERTED_CHANNEL, _isset(cs_params->pins[2]) ? 3 : 2);
   adc_inserted_channel_config(0,get_adc_channel(DIGITAL_TO_PINNAME(cs_params->pins[0])),SAMPLING_TIME);
-	adc_inserted_channel_config(1,get_adc_channel(DIGITAL_TO_PINNAME(cs_params->pins[1])),SAMPLING_TIME);
-	if(_isset(cs_params->pins[2])){
+  adc_inserted_channel_config(1,get_adc_channel(DIGITAL_TO_PINNAME(cs_params->pins[1])),SAMPLING_TIME);
+  if(_isset(cs_params->pins[2])){
     adc_inserted_channel_config(2,get_adc_channel(DIGITAL_TO_PINNAME(cs_params->pins[2])),SAMPLING_TIME);
   }
   adc_data_alignment_config(ADC_DATAALIGN_RIGHT);
-	
-  // Set ADC to scan mode
-	adc_special_function_config(ADC_SCAN_MODE, ENABLE);
 
-	// Enable trigger and set trigger source event of ADC
-	adc_external_trigger_config(ADC_INSERTED_CHANNEL, ENABLE);
-	adc_external_trigger_source_config(ADC_INSERTED_CHANNEL, ADC_EXTTRIG_INSERTED_T0_CH3);
-	
+  // Set ADC to scan mode
+  adc_special_function_config(ADC_SCAN_MODE, ENABLE);
+
+  // Enable trigger and set trigger source event of ADC
+  adc_external_trigger_config(ADC_INSERTED_CHANNEL, ENABLE);
+  adc_external_trigger_source_config(ADC_INSERTED_CHANNEL, ADC_EXTTRIG_INSERTED_T0_CH3);
 
   #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
   /* clear the ADC Interrupt flag */
@@ -72,13 +71,13 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
   nvic_irq_enable(ADC_CMP_IRQn, 0, 0);
   #endif
 
-	// Enable ADC (must be before calibration)
-	adc_enable();
-  
+  // Enable ADC (must be before calibration)
+  adc_enable();
+
   delay(1U);
-	
-	// Calibrate ADC values
-	adc_calibration_enable();
+
+  // Calibrate ADC values
+  adc_calibration_enable();
 
   return cs_params;
 }
@@ -108,10 +107,9 @@ float _readADCVoltageLowSide(const int pin, const void* _cs_params){
       #else
       return adc_inserted_data_read(i) * cs_params->adc_voltage_conv;
       #endif
-  } 
+  }
   return 0;
 }
-
 
 // Regular conversion through the core's analogRead path (get_adc_value: 12 bit, without the analogRead resolution):
 // measured on the GD32F130 split board, motor running, with the current sense ADC: injected currents not changed,
@@ -128,7 +126,6 @@ float _readRegularADCVoltage(const int pin){
   pinMode(pin, INPUT_ANALOG);
   return get_adc_value(pin_name) * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
 }
-
 
 #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT
 extern "C" {

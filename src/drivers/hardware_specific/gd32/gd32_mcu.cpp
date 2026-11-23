@@ -93,32 +93,32 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
   timer_deinit(TIMER_BLDC);
   // The PWM keeps running when the debugger halts the core. To stop the timer counter instead:
   // dbg_periph_enable(DBG_TIMER0_HOLD) in the sketch after driver.init()
- 
+
   // Set up the basic parameter struct for the timer
   timer_struct_para_init(&timerBldc_parameter_struct);
-  timerBldc_parameter_struct.counterdirection  = TIMER_COUNTER_UP;
-  timerBldc_parameter_struct.prescaler 		     = 0;
-  timerBldc_parameter_struct.alignedmode 	     = TIMER_COUNTER_CENTER_DOWN;
-  timerBldc_parameter_struct.period			       = SystemCoreClock / pwm_frequency;
-  timerBldc_parameter_struct.clockdivision 	   = TIMER_CKDIV_DIV1;
+  timerBldc_parameter_struct.counterdirection = TIMER_COUNTER_UP;
+  timerBldc_parameter_struct.prescaler = 0;
+  timerBldc_parameter_struct.alignedmode = TIMER_COUNTER_CENTER_DOWN;
+  timerBldc_parameter_struct.period = SystemCoreClock / pwm_frequency;
+  timerBldc_parameter_struct.clockdivision = TIMER_CKDIV_DIV1;
   timerBldc_parameter_struct.repetitioncounter = 1;
-  
+
   // Initialize timer with basic parameter struct
   timer_init(TIMER_BLDC, &timerBldc_parameter_struct);
   timer_auto_reload_shadow_enable(TIMER_BLDC);
-  
+
   // Set up the output channel parameter struct
   timer_channel_output_struct_para_init(&timerBldc_oc_parameter_struct);
-  timerBldc_oc_parameter_struct.outputstate   = TIMER_CCX_DISABLE;
-  timerBldc_oc_parameter_struct.outputnstate  = TIMER_CCXN_DISABLE;
+  timerBldc_oc_parameter_struct.outputstate = TIMER_CCX_DISABLE;
+  timerBldc_oc_parameter_struct.outputnstate = TIMER_CCXN_DISABLE;
   #if SIMPLEFOC_PWM_HIGHSIDE_ACTIVE_HIGH==false
-    timerBldc_oc_parameter_struct.ocpolarity    = TIMER_OC_POLARITY_LOW;
-    timerBldc_oc_parameter_struct.ocidlestate 	= TIMER_OC_IDLE_STATE_HIGH;
+    timerBldc_oc_parameter_struct.ocpolarity = TIMER_OC_POLARITY_LOW;
+    timerBldc_oc_parameter_struct.ocidlestate = TIMER_OC_IDLE_STATE_HIGH;
   #endif
 
   #if SIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH==false
-    timerBldc_oc_parameter_struct.ocnpolarity 	= TIMER_OCN_POLARITY_LOW;
-    timerBldc_oc_parameter_struct.ocnidlestate 	= TIMER_OCN_IDLE_STATE_HIGH;
+    timerBldc_oc_parameter_struct.ocnpolarity = TIMER_OCN_POLARITY_LOW;
+    timerBldc_oc_parameter_struct.ocnidlestate = TIMER_OCN_IDLE_STATE_HIGH;
   #endif
 
   // Configure the three phase channels and the sampling channel: PWM0, no fast mode, shadow register,
@@ -135,15 +135,15 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 
   // Set up the break parameter struct
   timer_break_struct_para_init(&timerBldc_break_parameter_struct);
-  timerBldc_break_parameter_struct.runoffstate      = TIMER_ROS_STATE_ENABLE;
-  timerBldc_break_parameter_struct.ideloffstate     = TIMER_IOS_STATE_DISABLE;
-  timerBldc_break_parameter_struct.protectmode	    = TIMER_CCHP_PROT_OFF;
-  timerBldc_break_parameter_struct.deadtime 	      = _deadTimeRegister(dead_time_cycles);
-  timerBldc_break_parameter_struct.outputautostate 	= TIMER_OUTAUTO_DISABLE;
+  timerBldc_break_parameter_struct.runoffstate = TIMER_ROS_STATE_ENABLE;
+  timerBldc_break_parameter_struct.ideloffstate = TIMER_IOS_STATE_DISABLE;
+  timerBldc_break_parameter_struct.protectmode = TIMER_CCHP_PROT_OFF;
+  timerBldc_break_parameter_struct.deadtime = _deadTimeRegister(dead_time_cycles);
+  timerBldc_break_parameter_struct.outputautostate = TIMER_OUTAUTO_DISABLE;
 
   #ifdef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
-    timerBldc_break_parameter_struct.breakstate	      = TIMER_BREAK_ENABLE;
-    timerBldc_break_parameter_struct.breakpolarity	  = TIMER_BREAK_POLARITY_LOW;
+    timerBldc_break_parameter_struct.breakstate = TIMER_BREAK_ENABLE;
+    timerBldc_break_parameter_struct.breakpolarity = TIMER_BREAK_POLARITY_LOW;
   #endif
 
   // Configure the timer with the break parameter struct
@@ -151,28 +151,27 @@ void* _configure6PWM(long pwm_frequency, float dead_zone, const int pinA_h, cons
 
   // TIMER0 primary output function enable
   timer_primary_output_config(TIMER_BLDC, ENABLE);
-   
+
   // Enable the timer and start PWM
   timer_enable(TIMER_BLDC);
 
   GD32DriverParams* params = new GD32DriverParams {
     .timers = { TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC, TIMER_BLDC },
     .channels = { channelA, channelA, channelB, channelB, channelC, channelC },
-    .pwm_frequency  = pwm_frequency,
-    .range          = SystemCoreClock/pwm_frequency,
-    .dead_zone      = dead_zone,
+    .pwm_frequency = pwm_frequency,
+    .range = SystemCoreClock/pwm_frequency,
+    .dead_zone = dead_zone,
     .interface_type = _HARDWARE_6PWM
   };
-  
+
   return params; // success
 }
 
 // setting pwm to hardware pin - instead analogWrite()
 static void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value)
-{  
+{
   timer_channel_output_pulse_value_config(timer_periph,channel,value);
 }
-
 
 static uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
 {
@@ -236,6 +235,5 @@ void _writeDutyCycle6PWM(float dc_a, float dc_b, float dc_c, PhaseState* phase_s
       break;
   }
 }
-
 
 #endif
