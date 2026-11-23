@@ -23,10 +23,17 @@
 #define TIMER_BLDC_CHANNEL_S TIMER_CH_3
 #define SAMPLING_POINT 0.98 // The closer to 1 the closer to the middle of LOW side ON time. Don't use 1, it will overlap with the update event and not trigger
 
-// Break input (TIMER0_BRKIN, alternate function 2), active low.
-// Can be changed with a build flag, or disabled with -D TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN=NOT_SET
+// Polarity of the gate driver inputs: build flags read by all the drivers (drivers/hardware_api.h), default true.
+// For drivers with active low inputs, e.g. the low side of the hoverboard split boards:
+//   -D SIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false   (and/or SIMPLEFOC_PWM_HIGHSIDE_ACTIVE_HIGH=false)
+// They set the output polarity of the channels (CHxP / CHxNP) and their idle state.
+
+// Break input (emergency shutdown): disabled by default, as the pin depends on the board.
+// To enable it, give the pin of TIMER0_BRKIN (alternate function 2 on the GD32F1x0), active low:
+//   -D TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN=PB12   (hoverboard split boards)
+// A low level on this pin turns all the PWM outputs off in hardware (clears POEN, the primary output enable).
 #ifndef TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN
-#define TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN PB12
+#define TIMER_BLDC_EMERGENCY_SHUTDOWN_PIN NOT_SET
 #endif
 
 typedef struct GD32DriverParams {
