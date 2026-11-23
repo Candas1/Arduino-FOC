@@ -54,13 +54,6 @@ void* _configureADCLowSide(const void* driver_params, const int pinA, const int 
   // Set ADC to scan mode
 	adc_special_function_config(ADC_SCAN_MODE, ENABLE);
 
-  // Disable the temperature sensor, Vrefint and vbat channel
-	//adc_tempsensor_vrefint_disable();
-	//adc_vbat_disable();
-	
-	// ADC analog watchdog disable
-	//adc_watchdog_disable();
-
 	// Enable trigger and set trigger source event of ADC
 	adc_external_trigger_config(ADC_INSERTED_CHANNEL, ENABLE);
 	adc_external_trigger_source_config(ADC_INSERTED_CHANNEL, ADC_EXTTRIG_INSERTED_T0_CH3);

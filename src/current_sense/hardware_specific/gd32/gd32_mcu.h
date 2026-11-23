@@ -13,8 +13,6 @@
 typedef struct GD32CurrentSenseParams {
   int pins[3] = {(int)NOT_SET};
   float adc_voltage_conv;
-  //ADC_HandleTypeDef* adc_handle = NP;
-  //HardwareTimer* timer_handle = NP;
 } GD32CurrentSenseParams;
 
 //#define ADC_USE_INTERRUPT         // If defined, will use the End of conversion interrupt of inserted ADC
