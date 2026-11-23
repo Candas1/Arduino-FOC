@@ -93,7 +93,7 @@ void* _driverSyncLowSide(void* _driver_params, void* _cs_params){
       || driver_params->interface_type != _HARDWARE_6PWM) return SIMPLEFOC_CURRENT_SENSE_INIT_FAILED;
 
   // Start T0CH3 for current sampling
-  timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,ENABLE);
+  timer_channel_output_state_config(TIMER_BLDC,TIMER_BLDC_CHANNEL_S,TIMER_CCX_ENABLE);
 
   return _cs_params;
 }
