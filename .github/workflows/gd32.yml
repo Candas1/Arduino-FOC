@@ -34,7 +34,7 @@ jobs:
           --project-option="platform=$PLATFORM" --project-option="framework=arduino" --project-option="platform_packages=$CORE"
           --project-option="build_flags=-DSIMPLEFOC_PWM_LOWSIDE_ACTIVE_HIGH=false"
         env:
-          PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/split_hoverboard/gd32_split_hoverboard.ino
+          PLATFORMIO_CI_SRC: examples/hardware_specific_examples/GD32/gd32_split_hoverboard/gd32_split_hoverboard.ino
 
       # Other GD32 families (F10x, F30x, E23x...): the GD32 code above is only for the GD32F1x0
       # (#if defined(GD32F1x0) in src/drivers and src/current_sense hardware_specific/gd32). On the other families
