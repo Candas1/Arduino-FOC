@@ -173,45 +173,28 @@ static void _setPwm(uint32_t timer_periph, uint16_t channel, uint32_t value)
   timer_channel_output_pulse_value_config(timer_periph,channel,value);
 }
 
-static uint32_t _isChannelEnabled(uint32_t timer_periph, uint16_t channel)
+// Output enable bits of a channel in TIMER_CHCTL2 (4 bits per channel, TIMER_CH_0..2 = 0..2):
+// CHxEN for the output (high side), CHxNEN for the complementary output (low side)
+static bool _isOutputEnabled(uint32_t timer_periph, uint16_t channel)
 {
-  switch (channel)
-  {
-  /* configure TIMER_CH_0 */
-  case TIMER_CH_0:
-    return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH0EN);
-  /* configure TIMER_CH_1 */
-  case TIMER_CH_1:
-    return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH1EN);
-  /* configure TIMER_CH_2 */
-  case TIMER_CH_2:
-    return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH2EN);
-  /* configure TIMER_CH_3 */
-  case TIMER_CH_3:
-    return (TIMER_CHCTL2(timer_periph) & (uint32_t)TIMER_CHCTL2_CH3EN);
-  default:
-    return 0xFFFF;    // should never get here. Added to avoid compile warning
-  }
+  return TIMER_CHCTL2(timer_periph) & (TIMER_CHCTL2_CH0EN << (4 * channel));
 }
 
+static bool _isComplementaryOutputEnabled(uint32_t timer_periph, uint16_t channel)
+{
+  return TIMER_CHCTL2(timer_periph) & (TIMER_CHCTL2_CH0NEN << (4 * channel));
+}
+
+// PHASE_ON: both sides, PHASE_HI: high side only, PHASE_LO: low side only, PHASE_OFF: none (high impedance)
 static void _setSinglePhaseState(PhaseState state, uint32_t timer_periph, uint16_t channel)
 {
-  switch (state) {
-    case PhaseState::PHASE_OFF:
-      if (_isChannelEnabled(timer_periph, channel) != 0) // disable timer channel only if enabled to avoid glitches
-      {
-        timer_channel_output_state_config(timer_periph,channel,TIMER_CCX_DISABLE);
-        timer_channel_complementary_output_state_config(timer_periph,channel,TIMER_CCXN_DISABLE);
-      }
-      break;
-    default:
-      if (_isChannelEnabled(timer_periph, channel) == 0) // enable timer channel only if disabled to avoid glitches
-      {
-        timer_channel_output_state_config(timer_periph,channel,TIMER_CCX_ENABLE);
-        timer_channel_complementary_output_state_config(timer_periph,channel,TIMER_CCXN_ENABLE);
-      }
-      break;
-  }
+  bool high_side_on = (state == PhaseState::PHASE_ON || state == PhaseState::PHASE_HI);
+  bool low_side_on = (state == PhaseState::PHASE_ON || state == PhaseState::PHASE_LO);
+  // only write the outputs that change, to avoid glitches
+  if (_isOutputEnabled(timer_periph, channel) != high_side_on)
+    timer_channel_output_state_config(timer_periph, channel, high_side_on ? TIMER_CCX_ENABLE : TIMER_CCX_DISABLE);
+  if (_isComplementaryOutputEnabled(timer_periph, channel) != low_side_on)
+    timer_channel_complementary_output_state_config(timer_periph, channel, low_side_on ? TIMER_CCXN_ENABLE : TIMER_CCXN_DISABLE);
 }
 
 // - BLDC driver - 6PWM setting
