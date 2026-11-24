@@ -111,20 +111,53 @@ float _readADCVoltageLowSide(const int pin, const void* _cs_params){
   return 0;
 }
 
-// Regular conversion through the core's analogRead path (get_adc_value: 12 bit, without the analogRead resolution):
-// measured on the GD32F130 split board, motor running, with the current sense ADC: injected currents not changed,
-// two pins read alternately give their own value
-// (except 0.02-0.05 % of the reads with the motor running, as with analogRead). It relies on the continuous mode set by the core's first
-// analogRead: our own single conversions waited for EOC, which the end of the injected group also sets, and
-// returned the previous result; with the continuous mode on, 1.5 cycle conversions froze the first injected channel.
+// Regular conversion on the current sense ADC (12 bit), for any ADC pin, several pins can be read in turn.
+// The ADC runs in the continuous mode set by the core (first analogRead or get_adc_value): it converts the regular
+// channel again and again, and the injected group (phase currents) interrupts it at each PWM trigger.
+// The end of conversion flag (EOC) is therefore almost always set, and it is also set at the end of the injected group:
+// it does not tell when the new channel is converted. After the channel change we wait for 3 ends of conversion:
+// the first may be the old channel, one may be the injected group (at most one: a PWM period is much longer than
+// 3 conversions), so the last regular result is the new channel. The injected group does not write the regular data.
+// The read used to go through the core's get_adc_value (~0.6 ms on the GD32F130, mostly code in the slow flash); it
+// gave the right channel only because it was slow (Candas1/simplefoc-work#22).
+// Do not read a phase current pin with this function: the sample time is set per channel, the injected
+// conversion of that phase would go from 1.5 to 7.5 cycles.
 float _readRegularADCVoltage(const int pin){
   PinName pin_name = DIGITAL_TO_PINNAME(pin);
-  if (!pin_in_pinmap(pin_name, PinMap_ADC)) {
+  uint32_t function = pinmap_function(pin_name, PinMap_ADC);
+  if (function == (uint32_t)NC) {
     SIMPLEFOC_DEBUG("GD32-CS: ERR: not an ADC pin: ", pin);
     return -1.0f;
   }
-  pinMode(pin, INPUT_ANALOG);
-  return get_adc_value(pin_name) * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
+  uint8_t channel = GD_PIN_CHANNEL_GET(function);  // on the GD32F1x0, ADC_CHANNEL_n is n
+
+  // analog mode only if the pin is not in it yet (pinMode is slow)
+  uint32_t port = gpio_port[GD_PORT_GET(pin_name)];
+  uint32_t pin_mode = (GPIO_CTL(port) >> (2 * GD_PIN_GET(pin_name))) & 0x3U;
+  if (pin_mode != GPIO_MODE_ANALOG) pinMode(pin, INPUT_ANALOG);
+
+  // the current sense init turns the ADC on but does not set the continuous mode: let the core finish the init once
+  if (!(ADC_CTL1 & ADC_CTL1_CTN)) get_adc_value(pin_name);
+
+  // 7.5 cycles as the core (1.5 cycles froze the first injected channel with the continuous mode on)
+  adc_regular_channel_config(0U, channel, ADC_SAMPLETIME_7POINT5);
+  adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
+  adc_flag_clear(ADC_FLAG_EOC);
+  int ends = 0;
+  // bound: a few us are enough (3 conversions + 1 injected group), 10000 turns are far more
+  for (int turns = 0; ends < 3; turns++) {
+    if (turns > 10000) {
+      static bool reported = false;  // report once, not at each call
+      if (!reported) SIMPLEFOC_DEBUG("GD32-CS: ERR: regular ADC conversion timeout, pin ", pin);
+      reported = true;
+      return -1.0f;
+    }
+    if (adc_flag_get(ADC_FLAG_EOC)) {
+      adc_flag_clear(ADC_FLAG_EOC);
+      ends++;
+    }
+  }
+  return adc_regular_data_read() * _ADC_VOLTAGE_F1 / _ADC_RESOLUTION_F1;
 }
 
 #ifdef SIMPLEFOC_GD32_ADC_INTERRUPT

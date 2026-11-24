@@ -26,13 +26,12 @@ typedef struct GD32CurrentSenseParams {
  * Read a regular ADC channel (bus voltage, temperature, potentiometer...) while the injected channels
  * measure the phase currents, as _readRegularADCVoltage on STM32.
  *
- * Same conversion as the core's analogRead (12 bit, blocking), on the ADC of the low side current
- * sense: the injected conversions of the currents have priority and are not changed.
- * Slow, as analogRead: ~0.8 ms per read on the GD32F130 (pinMode and pin table lookups of the core, in the slow
- * flash): read every 10-100 ms, not at every loop.
- * As with analogRead, a few reads return the value of the previously read pin while the motor runs
- * (0.02-0.05 % measured, two pins read alternately): filter the value or wait for several reads before acting
- * on it (e.g. an under/overvoltage cut).
+ * 12 bit, blocking for a few conversions, on the ADC of the low side current sense: the injected conversions of
+ * the currents have priority and are not changed. Several pins can be read in turn, each read waits for a
+ * conversion of its own pin. Much faster than analogRead, which spends ~0.6 ms in the core's code on the GD32F130.
+ * Do not read a phase current pin: its injected conversion would become slower (sample time set per channel).
+ * The core's analogRead used to return the value of the previously read pin for a few reads while the motor runs
+ * (0.02-0.05 %): filter the value or wait for several reads before acting on it (e.g. an under/overvoltage cut).
  *
  * Unlike STM32: make a first read (this function or analogRead, any pin) BEFORE currentSense.init().
  * The core configures and calibrates the ADC at its first read; after the current sense init it would
@@ -43,7 +42,7 @@ typedef struct GD32CurrentSenseParams {
  * also returns the ADC channel. No effect if those pins are not used as alternate function (timer, SPI, UART...).
  *
  * @param pin - the Arduino pin to read (ADC pin)
- * @return float - the voltage read on the pin, or -1.0f if the pin is not an ADC pin
+ * @return float - the voltage read on the pin, or -1.0f if the pin is not an ADC pin or the conversion times out
  */
 float _readRegularADCVoltage(const int pin);
 
