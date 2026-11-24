@@ -115,9 +115,11 @@ float _readADCVoltageLowSide(const int pin, const void* _cs_params){
 // The ADC runs in the continuous mode set by the core (first analogRead or get_adc_value): it converts the regular
 // channel again and again, and the injected group (phase currents) interrupts it at each PWM trigger.
 // The end of conversion flag (EOC) is therefore almost always set, and it is also set at the end of the injected group:
-// it does not tell when the new channel is converted. After the channel change we wait for 3 ends of conversion:
-// the first may be the old channel, one may be the injected group (at most one: a PWM period is much longer than
-// 3 conversions), so the last regular result is the new channel. The injected group does not write the regular data.
+// it does not tell when the new channel is converted. After the channel change we wait for 4 ends of conversion:
+// the first may be the old channel, two may be injected groups (center-aligned timer: the trigger channel matches on
+// the up and the down count, ~2.5 us apart near the top), so the last regular result is the new channel. A PWM
+// period is much longer than these ~8 us. The injected group does not write the regular data. EOIC (end of the
+// injected group) cannot tell the ends apart: with SIMPLEFOC_GD32_ADC_INTERRUPT the interrupt clears it at once.
 // The read used to go through the core's get_adc_value (~0.6 ms on the GD32F130, mostly code in the slow flash); it
 // gave the right channel only because it was slow (Candas1/simplefoc-work#22).
 // Do not read a phase current pin with this function: the sample time is set per channel, the injected
@@ -137,18 +139,23 @@ float _readRegularADCVoltage(const int pin){
   if (pin_mode != GPIO_MODE_ANALOG) pinMode(pin, INPUT_ANALOG);
 
   // the current sense init turns the ADC on but does not set the continuous mode: let the core finish the init once
-  if (!(ADC_CTL1 & ADC_CTL1_CTN)) get_adc_value(pin_name);
+  // (configuration and calibration, at its first read only), and set the continuous mode if something cleared it
+  if (!(ADC_CTL1 & ADC_CTL1_CTN)) {
+    get_adc_value(pin_name);
+    if (!(ADC_CTL1 & ADC_CTL1_CTN)) adc_special_function_config(ADC_CONTINUOUS_MODE, ENABLE);
+  }
 
   // 7.5 cycles as the core (1.5 cycles froze the first injected channel with the continuous mode on)
   adc_regular_channel_config(0U, channel, ADC_SAMPLETIME_7POINT5);
   adc_software_trigger_enable(ADC_REGULAR_CHANNEL);
   adc_flag_clear(ADC_FLAG_EOC);
+  const int ends_to_wait = 4;  // old channel + up to 2 injected groups + the new channel
   int ends = 0;
-  // bound: a few us are enough (3 conversions + 1 injected group), 10000 turns are far more
-  for (int turns = 0; ends < 3; turns++) {
-    if (turns > 10000) {
-      static bool reported = false;  // report once, not at each call
-      if (!reported) SIMPLEFOC_DEBUG("GD32-CS: ERR: regular ADC conversion timeout, pin ", pin);
+  // bound: ~8 us are enough; 1000 turns are far more (each turn reads a register, 10 to 150 cycles)
+  for (int turns = 0; ends < ends_to_wait; turns++) {
+    if (turns > 1000) {
+      static bool reported = false;  // report once (for any pin), not at each call
+      if (!reported) SIMPLEFOC_DEBUG("GD32-CS: ERR: regular ADC conversion timeout, first on pin ", pin);
       reported = true;
       return -1.0f;
     }
