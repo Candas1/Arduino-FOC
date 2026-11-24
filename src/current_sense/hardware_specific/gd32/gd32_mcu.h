@@ -28,7 +28,10 @@ typedef struct GD32CurrentSenseParams {
  *
  * 12 bit, blocking for a few conversions, on the ADC of the low side current sense: the injected conversions of
  * the currents have priority and are not changed. Several pins can be read in turn, each read waits for a
- * conversion of its own pin (a few us). Much faster than analogRead, which spends ~0.6 ms in the core's code on the GD32F130.
+ * conversion of its own pin (a few us). Much faster than analogRead, which spends ~0.6 ms in the core's code on the
+ * GD32F130.
+ * Read all your ADC pins with this function, not with the core's analogRead: analogRead does not wait for the
+ * conversion of the new pin and can return the value of the pin read before (right only while its code is slow).
  * Do not read a phase current pin: its injected conversion would become slower (sample time set per channel).
  * The core's analogRead used to return the value of the previously read pin for a few reads while the motor runs
  * (0.02-0.05 %): filter the value or wait for several reads before acting on it (e.g. an under/overvoltage cut).
